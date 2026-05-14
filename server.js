@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
 // ─── Middleware ──────────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || true,
+  origin: (process.env.CORS_ORIGIN || 'http://localhost:3000').split(','),
   credentials: true,
 }));
 
@@ -97,7 +97,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // ─── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/auth/google', googleAuthRoutes);
+app.use('/api/auth/google', authLimiter, googleAuthRoutes);
 
 
 
