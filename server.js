@@ -46,7 +46,7 @@ app.use(
   session({
 
     name: 'oauth_session',
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || 'dev_session_secret_change_me',
     resave: false,
     saveUninitialized: false,
     store: new MySQLStore({
