@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Facilities – Mamagan</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <!-- Navbar -->
+  <header class="navbar">
+    <span class="brand">Mamagan</span>
+    <nav>
+      <a href="/facilities.html">Facilities</a>
+      <a href="#" id="navUser" style="opacity:.7; cursor:default;"></a>
+      <a href="#" id="navLogout">Logout</a>
+    </nav>
+  </header>
+
+  <!-- Page Content -->
+  <main class="page-content">
+    <h2>Available Facilities</h2>
+    <div class="facility-grid" id="facilityGrid">
+      <p id="loadingMsg" style="color:#777;">Loading facilities...</p>
+    </div>
+  </main>
+
+  <!-- Booking Modal -->
+  <div class="modal-overlay" id="bookingModal">
+    <div class="modal">
+      <h3>Book Facility: <span id="modalFacilityName"></span></h3>
+      <div class="alert alert-error" id="modalAlert"></div>
+      <form id="bookingForm" novalidate>
+        <input type="hidden" id="bookingFacilityId" />
+        <div class="form-group">
+          <label for="bookDate">Date</label>
+          <input type="date" id="bookDate" required />
+        </div>
+        <div class="form-group">
+          <label for="startTime">Start Time</label>
+          <input type="time" id="startTime" required />
+        </div>
+        <div class="form-group">
+          <label for="endTime">End Time</label>
+          <input type="time" id="endTime" required />
+        </div>
+        <div class="form-group">
+          <label for="bookNotes">Notes (optional)</label>
+          <input type="text" id="bookNotes" placeholder="Any special requirements?" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="closeModal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="bookSubmitBtn">Confirm Booking</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/facilities.js"></script>
+</body>
+</html>

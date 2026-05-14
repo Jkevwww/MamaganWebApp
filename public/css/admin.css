@@ -1,0 +1,167 @@
+/* ─── Admin Layout ──────────────────────────────────────────────────────────── */
+body.admin-body {
+  display: flex;
+  flex-direction: column;
+  background: #f0f2f5;
+}
+
+/* ─── Admin Navbar ──────────────────────────────────────────────────────────── */
+.admin-navbar {
+  background: #1e293b;
+  color: #e2e8f0;
+  height: 60px;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.admin-navbar .brand { font-size: 1.1rem; font-weight: 700; color: #fff; }
+.admin-navbar .brand span { color: #60a5fa; }
+.admin-navbar .nav-user { font-size: .88rem; color: #94a3b8; }
+.admin-navbar .btn-logout {
+  background: transparent;
+  border: 1px solid #475569;
+  color: #94a3b8;
+  padding: .35rem .85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .85rem;
+  margin-left: 1rem;
+  transition: all .2s;
+}
+.admin-navbar .btn-logout:hover { background: #334155; color: #e2e8f0; }
+
+/* ─── Sidebar + Main ────────────────────────────────────────────────────────── */
+.admin-layout {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - 60px);
+}
+
+.sidebar {
+  width: 220px;
+  background: #1e293b;
+  padding: 1.5rem 0;
+  flex-shrink: 0;
+}
+
+.sidebar a {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .7rem 1.5rem;
+  color: #94a3b8;
+  font-size: .9rem;
+  transition: background .2s, color .2s;
+}
+.sidebar a:hover, .sidebar a.active {
+  background: #334155;
+  color: #e2e8f0;
+}
+.sidebar a .icon { font-size: 1rem; }
+
+/* ─── Main Content ──────────────────────────────────────────────────────────── */
+.admin-main {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.admin-main h2 { font-size: 1.4rem; margin-bottom: 1.5rem; color: #1e293b; }
+
+/* ─── Stat Cards ────────────────────────────────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.4rem;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07);
+}
+.stat-card .stat-label { font-size: .82rem; color: #64748b; text-transform: uppercase; letter-spacing: .5px; }
+.stat-card .stat-value { font-size: 2rem; font-weight: 700; color: #1e293b; margin-top: .3rem; }
+
+/* ─── Admin Table ───────────────────────────────────────────────────────────── */
+.table-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.4rem;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07);
+  overflow-x: auto;
+  margin-bottom: 2rem;
+}
+.table-card h3 { font-size: 1rem; margin-bottom: 1rem; color: #1e293b; }
+
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+thead th {
+  text-align: left;
+  padding: .6rem .8rem;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+tbody td { padding: .65rem .8rem; border-bottom: 1px solid #f1f5f9; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #f8fafc; }
+
+/* ─── Status Badges ─────────────────────────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: .2rem .7rem;
+  border-radius: 12px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-approved { background: #d1fae5; color: #065f46; }
+.status-cancelled { background: #fee2e2; color: #991b1b; }
+
+/* ─── Action Buttons ────────────────────────────────────────────────────────── */
+.btn-sm {
+  padding: .25rem .7rem;
+  font-size: .8rem;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background .2s;
+}
+.btn-approve { background: #d1fae5; color: #065f46; }
+.btn-approve:hover { background: #a7f3d0; }
+.btn-cancel { background: #fee2e2; color: #991b1b; }
+.btn-cancel:hover { background: #fecaca; }
+
+/* ─── Admin Login page ──────────────────────────────────────────────────────── */
+.admin-login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e293b;
+}
+.admin-login-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.3);
+}
+.admin-login-card h1 { font-size: 1.5rem; color: #1e293b; margin-bottom: .3rem; }
+.admin-login-card .subtitle { color: #64748b; font-size: .88rem; margin-bottom: 1.8rem; }
+
+/* ─── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .admin-main { padding: 1.2rem; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+}

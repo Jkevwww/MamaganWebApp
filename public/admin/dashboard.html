@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard – Mamagan Admin</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="admin-body">
+  <!-- Admin Navbar -->
+  <header class="admin-navbar">
+    <span class="brand">Mamagan <span>Admin</span></span>
+    <div style="display:flex; align-items:center;">
+      <span class="nav-user" id="navUser"></span>
+      <button class="btn-logout" id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a href="#section-stats" class="active"><span class="icon">&#128202;</span> Dashboard</a>
+      <a href="#section-bookings"><span class="icon">&#128197;</span> Bookings</a>
+      <a href="#section-users"><span class="icon">&#128100;</span> Users</a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+      <!-- Stats Section -->
+      <section id="section-stats">
+        <h2>Dashboard Overview</h2>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value" id="statUsers">–</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Facilities</div>
+            <div class="stat-value" id="statFacilities">–</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Bookings</div>
+            <div class="stat-value" id="statBookings">–</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pending Bookings</div>
+            <div class="stat-value" id="statPending">–</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bookings Section -->
+      <section id="section-bookings">
+        <div class="table-card">
+          <h3>All Bookings</h3>
+          <table id="bookingsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>User</th>
+                <th>Facility</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsTbody">
+              <tr><td colspan="7" style="text-align:center;color:#94a3b8;">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Users Section -->
+      <section id="section-users">
+        <div class="table-card">
+          <h3>Registered Users</h3>
+          <table id="usersTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Joined</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody">
+              <tr><td colspan="5" style="text-align:center;color:#94a3b8;">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/admin/js/dashboard.js"></script>
+</body>
+</html>

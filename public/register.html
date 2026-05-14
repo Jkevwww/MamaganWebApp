@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register – Mamagan</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <h1>Create Account</h1>
+      <p class="subtitle">Join Mamagan and book facilities easily</p>
+
+      <div class="alert alert-error" id="alertBox"></div>
+
+      <form id="registerForm" novalidate>
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" placeholder="Juan dela Cruz" required />
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Min. 8 characters" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Create Account</button>
+      </form>
+
+      <p style="text-align:center; margin-top:1.2rem; font-size:.9rem; color:#777;">
+        Already have an account? <a href="/login.html" style="color:#1a73e8;">Sign In</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    initRegisterForm('registerForm', 'alertBox', 'submitBtn');
+  </script>
+</body>
+</html>

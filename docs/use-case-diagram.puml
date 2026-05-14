@@ -1,0 +1,75 @@
+@startuml MamaganWebApp_UseCaseDiagram
+
+title Mamagan Web Application – Use Case Diagram
+
+left to right direction
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #EFF6FF
+  BorderColor #3B82F6
+  ArrowColor #1E40AF
+}
+
+actor "Guest / User" as User
+actor "Admin"        as Admin
+
+rectangle "Mamagan Web App" {
+
+  ' ─── Authentication ───────────────────────────────────────────────────────
+  package "Authentication" {
+    usecase "Register Account"     as UC_Register
+    usecase "Login"                as UC_Login
+    usecase "Logout"               as UC_Logout
+    usecase "View Profile"         as UC_Profile
+  }
+
+  ' ─── Facility Browsing ────────────────────────────────────────────────────
+  package "Facility Browsing" {
+    usecase "View All Facilities"  as UC_ViewFacilities
+    usecase "View Facility Detail" as UC_ViewDetail
+  }
+
+  ' ─── Booking ──────────────────────────────────────────────────────────────
+  package "Booking" {
+    usecase "Book a Facility"      as UC_Book
+    usecase "View My Bookings"     as UC_MyBookings
+  }
+
+  ' ─── Admin ────────────────────────────────────────────────────────────────
+  package "Admin Management" {
+    usecase "Admin Login"          as UC_AdminLogin
+    usecase "View Dashboard Stats" as UC_Stats
+    usecase "Manage Bookings"      as UC_ManageBookings
+    usecase "Approve Booking"      as UC_Approve
+    usecase "Cancel Booking"       as UC_Cancel
+    usecase "View All Users"       as UC_Users
+  }
+}
+
+' ─── User relationships ──────────────────────────────────────────────────────
+User --> UC_Register
+User --> UC_Login
+User --> UC_Logout
+User --> UC_Profile
+User --> UC_ViewFacilities
+User --> UC_ViewDetail
+User --> UC_Book
+User --> UC_MyBookings
+
+' ─── Admin relationships ─────────────────────────────────────────────────────
+Admin --> UC_AdminLogin
+Admin --> UC_Stats
+Admin --> UC_ManageBookings
+Admin --> UC_Users
+Admin --> UC_Logout
+
+UC_ManageBookings .> UC_Approve : <<include>>
+UC_ManageBookings .> UC_Cancel  : <<include>>
+
+' ─── Extensions ──────────────────────────────────────────────────────────────
+UC_Book       .> UC_Login            : <<extend>>\n(if not logged in)
+UC_MyBookings .> UC_Login            : <<extend>>\n(if not logged in)
+UC_Stats      .> UC_AdminLogin       : <<extend>>\n(if not admin)
+
+@enduml

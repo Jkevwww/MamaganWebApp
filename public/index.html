@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mamagan Web App</title>
+  <script>
+    // Redirect to facilities if logged in, otherwise to login
+    const token = localStorage.getItem('token');
+    window.location.replace(token ? '/facilities.html' : '/login.html');
+  </script>
+</head>
+<body></body>
+</html>
