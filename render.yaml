@@ -10,20 +10,54 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_NAME
-        sync: false
-      - key: DB_SSL
-        value: "true"
+        value: 10000
+
+      - key: SERVER_URL
+        value: https://YOUR-RENDER-APP.onrender.com
+      - key: CLIENT_URL
+        value: https://YOUR-RENDER-APP.onrender.com
+
       - key: JWT_SECRET
         sync: false
-      - key: JWT_EXPIRES_IN
-        value: 7d
+      - key: SESSION_SECRET
+        sync: false
+
+      - key: MYSQL_HOST
+        sync: false
+      - key: MYSQL_PORT
+        value: 3306
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: MYSQL_DATABASE
+        sync: false
+      - key: MYSQL_SSL_CA
+        sync: false
+
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        value: https://YOUR-RENDER-APP.onrender.com/api/auth/google/callback
+
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CALLBACK_URL
+        value: https://YOUR-RENDER-APP.onrender.com/api/auth/github/callback
+
+      - key: OAUTH_SUCCESS_GUEST_REDIRECT
+        value: /facilities.html
+      - key: OAUTH_SUCCESS_ADMIN_REDIRECT
+        value: /admin/dashboard.html
+      - key: OAUTH_FAILURE_REDIRECT
+        value: /login.html?error=oauth_failed
+

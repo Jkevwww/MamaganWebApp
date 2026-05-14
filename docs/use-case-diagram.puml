@@ -11,65 +11,86 @@ skinparam usecase {
   ArrowColor #1E40AF
 }
 
-actor "Guest / User" as User
-actor "Admin"        as Admin
+actor "Guest / Tourist" as Guest
+actor "Resort Staff / Admin" as Staff
+actor "PayMongo Payment Gateway" as PayMongo
+actor "System Administrator" as SysAdmin
 
 rectangle "Mamagan Web App" {
 
-  ' ─── Authentication ───────────────────────────────────────────────────────
   package "Authentication" {
-    usecase "Register Account"     as UC_Register
-    usecase "Login"                as UC_Login
-    usecase "Logout"               as UC_Logout
-    usecase "View Profile"         as UC_Profile
+    usecase "Register" as UC_Register
+    usecase "Login" as UC_Login
+    usecase "Continue with Google" as UC_Google
+    usecase "Continue with GitHub" as UC_GitHub
+    usecase "View My Bookings" as UC_ViewMyBookings
+    usecase "Logout" as UC_Logout
   }
 
-  ' ─── Facility Browsing ────────────────────────────────────────────────────
-  package "Facility Browsing" {
-    usecase "View All Facilities"  as UC_ViewFacilities
-    usecase "View Facility Detail" as UC_ViewDetail
+  package "Facility Management" {
+    usecase "Browse Facilities" as UC_BrowseFacilities
+    usecase "Check Availability" as UC_CheckAvailability
+    usecase "Manage Facilities" as UC_ManageFacilities
   }
 
-  ' ─── Booking ──────────────────────────────────────────────────────────────
   package "Booking" {
-    usecase "Book a Facility"      as UC_Book
-    usecase "View My Bookings"     as UC_MyBookings
+    usecase "Create Booking" as UC_CreateBooking
+    usecase "Cancel Booking" as UC_CancelBooking
+    usecase "Confirm Guest Arrival" as UC_ConfirmGuestArrival
   }
 
-  ' ─── Admin ────────────────────────────────────────────────────────────────
-  package "Admin Management" {
-    usecase "Admin Login"          as UC_AdminLogin
-    usecase "View Dashboard Stats" as UC_Stats
-    usecase "Manage Bookings"      as UC_ManageBookings
-    usecase "Approve Booking"      as UC_Approve
-    usecase "Cancel Booking"       as UC_Cancel
-    usecase "View All Users"       as UC_Users
+  package "Payments" {
+    usecase "Pay with GCash/Maya/Card" as UC_PayGCashMayaCard
+    usecase "Process Payment via PayMongo" as UC_ProcessViaPayMongo
+    usecase "Receive QR Ticket" as UC_ReceiveQRTicket
+    usecase "Refund Process" as UC_RefundProcess
   }
+
+  package "Admin Operations" {
+    usecase "Manage Bookings" as UC_ManageBookings
+    usecase "Manage Rates and Promos" as UC_ManageRatesPromos
+    usecase "Manage Blackout Dates" as UC_ManageBlackoutDates
+    usecase "Generate Reports" as UC_GenerateReports
+  }
+
 }
 
-' ─── User relationships ──────────────────────────────────────────────────────
-User --> UC_Register
-User --> UC_Login
-User --> UC_Logout
-User --> UC_Profile
-User --> UC_ViewFacilities
-User --> UC_ViewDetail
-User --> UC_Book
-User --> UC_MyBookings
+' ---------------- Relationships (include/extend) ----------------
 
-' ─── Admin relationships ─────────────────────────────────────────────────────
-Admin --> UC_AdminLogin
-Admin --> UC_Stats
-Admin --> UC_ManageBookings
-Admin --> UC_Users
-Admin --> UC_Logout
+Guest --> UC_Register
+Guest --> UC_Login
+Guest --> UC_Google
+Guest --> UC_GitHub
+Guest --> UC_BrowseFacilities
+Guest --> UC_CreateBooking
+Guest --> UC_ViewMyBookings
+Guest --> UC_Logout
 
-UC_ManageBookings .> UC_Approve : <<include>>
-UC_ManageBookings .> UC_Cancel  : <<include>>
+Staff --> UC_ManageFacilities
+Staff --> UC_ManageBookings
+Staff --> UC_ManageRatesPromos
+Staff --> UC_ManageBlackoutDates
+Staff --> UC_ConfirmGuestArrival
+Staff --> UC_GenerateReports
 
-' ─── Extensions ──────────────────────────────────────────────────────────────
-UC_Book       .> UC_Login            : <<extend>>\n(if not logged in)
-UC_MyBookings .> UC_Login            : <<extend>>\n(if not logged in)
-UC_Stats      .> UC_AdminLogin       : <<extend>>\n(if not admin)
+SysAdmin --> UC_ManageFacilities
+SysAdmin --> UC_GenerateReports
+
+' Create Booking composition
+UC_CreateBooking .> UC_CheckAvailability : <<include>>
+UC_CreateBooking .> UC_PayGCashMayaCard : <<include>>
+
+' Payment composition
+UC_PayGCashMayaCard .> UC_ProcessViaPayMongo : <<include>>
+
+' Success flow
+UC_ProcessViaPayMongo .> UC_ReceiveQRTicket : <<include>>
+
+' Cancel flow
+UC_CancelBooking .> UC_RefundProcess : <<extend>>
+
+' ---------------- Booking/admin admin relationships ----------------
+UC_ManageBookings .> UC_CancelBooking : <<include>>
 
 @enduml
+
