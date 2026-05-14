@@ -24,6 +24,17 @@ function initLoginForm(formId, alertId, btnId) {
   const btn = document.getElementById(btnId);
   if (btn) btn.dataset.originalText = btn.textContent;
 
+  // Show OAuth failure from callback redirect
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error === 'oauth_failed') {
+      showAlert(alertId, 'Google sign-in failed. Please try again.', 'error');
+    }
+  } catch (_) {
+    // ignore
+  }
+
   // Redirect if already logged in (cookie-based)
   (async () => {
     try {
@@ -34,15 +45,17 @@ function initLoginForm(formId, alertId, btnId) {
         if (role === 'GUEST') window.location.replace('/facilities.html');
         else window.location.replace('/admin/dashboard.html');
         return;
+        return;
       }
     } catch (_) {
       // ignore
     }
   })();
 
+  const formEl = document.getElementById(formId);
+  if (!formEl) return;
 
-
-  document.getElementById(formId).addEventListener('submit', async (e) => {
+  formEl.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideAlert(alertId);
     const email = document.getElementById('email').value.trim();
@@ -96,11 +109,10 @@ function initRegisterForm(formId, alertId, btnId) {
     }
   })();
 
+  const formEl = document.getElementById(formId);
+  if (!formEl) return;
 
-
-
-
-  document.getElementById(formId).addEventListener('submit', async (e) => {
+  formEl.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideAlert(alertId);
     const name = document.getElementById('name').value.trim();
@@ -123,8 +135,8 @@ function initRegisterForm(formId, alertId, btnId) {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, password }),
 
+        body: JSON.stringify({ name, email, phone, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
@@ -146,22 +158,23 @@ function initAdminLoginForm(formId, alertId, btnId) {
   const btn = document.getElementById(btnId);
   if (btn) btn.dataset.originalText = btn.textContent;
 
-  // If already logged in as admin, redirect to dashboard
-  // If already logged in, redirect based on /me.
-  try {
-    const res = await fetch('/api/auth/me');
-    if (res.ok) {
-      const data = await res.json();
-      const role = data?.role;
-      if (role && role !== 'GUEST') window.location.replace('/admin/dashboard.html');
-      return;
+  // Redirect if already logged in as admin
+  (async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {json();
+        const role = data?.role;
+        if (role && role !== 'GUEST') window.location.replace('/admin/dashboard.html');
+      }
+    } catch (_) {
+      // ignore
     }
-  } catch (_) {
-    // ignore
-  }
+  })();
 
+  const formEl = document.getElementById(formId);
+  if (!formEl) return;
 
-  document.getElementById(formId).addEventListener('submit', async (e) => {
+  formEl.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideAlert(alertId);
     const email = document.getElementById('email').value.trim();
@@ -209,7 +222,6 @@ async function logout(redirectTo = '/login.html') {
   window.location.replace(redirectTo);
 }
 
-
 /* ─── Auth guard helper (call at top of protected pages) ────────────────────── */
 function requireAuth(redirectTo = '/login.html') {
   const token = localStorage.getItem('token');
@@ -229,3 +241,4 @@ function requireAdmin(redirectTo = '/admin/login.html') {
   }
   return token;
 }
+

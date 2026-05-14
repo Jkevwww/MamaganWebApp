@@ -71,7 +71,34 @@ MamaganWebApp/
     └── use-case-diagram.puml
 ```
 
+## Google OAuth (Setup)
+
+### 1) Create OAuth credentials in Google Cloud
+- Go to **Google Cloud Console** → **APIs & Services** → **Credentials**.
+- Create **OAuth client ID** (type: **Web application**).
+- Set authorized redirect URI(s):
+  - `{{YOUR_BACKEND_BASE_URL}}/api/auth/google/callback`
+  - Example (local): `http://localhost:3001/api/auth/google/callback`
+
+### 2) Configure environment variables
+Edit `.env` (copied from `.env.example`) and set:
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_CALLBACK_URL`
+- `OAUTH_SUCCESS_ADMIN_REDIRECT` (relative path, e.g. `/admin/dashboard.html`)
+- `OAUTH_SUCCESS_GUEST_REDIRECT` (relative path, e.g. `/facilities.html`)
+
+Also ensure:
+- `SESSION_SECRET` is set (used by express-session + Passport OAuth state)
+
+### 3) Test
+1. Start the server.
+2. Open `/login.html`.
+3. Click **Continue with Google**.
+4. Confirm successful redirect based on account role.
+
 ## Getting Started
+
 
 ### 1. Install dependencies
 ```bash
@@ -82,7 +109,9 @@ npm install
 ```bash
 cp .env.example .env
 # Fill in your Aiven MySQL credentials and JWT secret
+# Also set SESSION_SECRET for Google OAuth state handling
 ```
+
 
 ### 3. Run database migrations
 ```bash

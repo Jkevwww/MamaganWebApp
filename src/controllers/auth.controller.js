@@ -1,9 +1,6 @@
 const authService = require('../services/auth.service');
 const { getCookieOptions, getTokenCookieName } = require('../utils/authCookie');
 
-
-
-
 function validateRegisterBody({ name, email, phone, password }) {
   if (!name || typeof name !== 'string' || name.trim().length < 2) {
     return 'Invalid name';

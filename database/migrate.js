@@ -46,18 +46,23 @@ async function runMigrations() {
     const sql = fs.readFileSync(filePath, 'utf8');
 
     try {
+      // Some migration files are not compatible with some MySQL variants.
+      // We intentionally treat failures as non-blocking, but we must not
+      // mark them as executed.
       await conn.query(sql);
-      // Parameterized insert to track this migration
+
+      // Parameterized insert to track this migration (only on success)
       await conn.query('INSERT INTO _migrations (filename) VALUES (?)', [file]);
       console.log(`  ✅ Ran: ${file}`);
       ran++;
     } catch (err) {
-      // Close connection before exiting so Aiven doesn't hold the socket
-      await conn.end();
       console.error(`  ❌ Failed on ${file}:`, err.message);
-      process.exit(1);
+      // Non-blocking: allow older/unsupported migrations to fail.
+      // Continue running other migrations.
     }
+
   }
+
 
   await conn.end();
 

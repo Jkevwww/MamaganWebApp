@@ -24,6 +24,7 @@ async function register({ name, email, phone, password }) {
     throw new AppError('Name, email, phone, and password are required', 400);
   }
 
+  // prevent duplicate emails
   const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
   if (existing.length > 0) {
     throw new AppError('Email already registered', 409);
@@ -31,14 +32,15 @@ async function register({ name, email, phone, password }) {
 
   const hashed = await hashPassword(password);
 
-  // Use COALESCE for access_tier to support legacy schemas.
+  // Requirements: new registered users must be role GUEST.
+  // access_tier should be GUEST if the field exists; safely force it here.
   const role = 'GUEST';
   const accessTier = 'GUEST';
 
   const [result] = await pool.query(
     `INSERT INTO users (name, email, phone, password_hash, password, role, access_tier, active)
      VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, TRUE))`,
-    [name, email, phone, hashed, hashed, role, accessTier, 1]
+    [name, email, phone, hashed, null, role, accessTier, 1]
   );
 
   const token = signToken({ id: result.insertId, role });
@@ -79,6 +81,7 @@ async function login({ email, password }) {
 
   // bcrypt compare against password_hash if present; otherwise fallback to legacy `password`
   const storedHash = user.password_hash || user.password;
+
   if (!storedHash) {
     throw new AppError('Invalid email or password', 401);
   }

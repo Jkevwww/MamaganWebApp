@@ -1,0 +1,24 @@
+/* Simple styles for Google OAuth button */
+.btn-google {
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  color: #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+}
+.btn-google:hover {
+  background: #f7f7f7;
+}
+
+.google-g-icon {
+  width: 18px;
+  height: 18px;
+}
+
