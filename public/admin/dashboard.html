@@ -8,104 +8,55 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin.css">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="admin-body">
 
-  <header class="admin-navbar">
-    <div class="brand">
-      <img src="/admin-logo.svg" alt="Mamagan Admin" height="30">
+  <div class="dashboard-stats-grid" id="dashboardStats">
+    <!-- Stat cards with skeletons -->
+    <div class="stat-card">
+      <div class="skeleton" style="height: 12px; width: 50%; margin-bottom: 0.5rem;"></div>
+      <div class="skeleton" style="height: 24px; width: 70%;"></div>
     </div>
-    <div style="display:flex; align-items:center; gap: 1.5rem;">
-      <div style="display: flex; align-items:center; gap: 0.5rem; color: #94a3b8; font-size: 0.9rem;">
-        <i data-lucide="user-circle" style="width: 20px;"></i>
-        <span id="navUser">Admin</span>
-      </div>
-      <button class="btn-logout" id="logoutBtn" style="display: flex; align-items:center; gap: 0.4rem;">
-        <i data-lucide="log-out" style="width: 16px;"></i> Logout
-      </button>
+    <div class="stat-card">
+      <div class="skeleton" style="height: 12px; width: 50%; margin-bottom: 0.5rem;"></div>
+      <div class="skeleton" style="height: 24px; width: 70%;"></div>
     </div>
-  </header>
-
-  <div class="admin-layout">
-    <aside class="sidebar">
-      <nav>
-        <a href="#section-stats" class="active"><i data-lucide="layout-dashboard" style="width: 18px;"></i> Dashboard</a>
-        <a href="#section-bookings"><i data-lucide="calendar" style="width: 18px;"></i> Bookings</a>
-        <a href="#section-facilities"><i data-lucide="palmtree" style="width: 18px;"></i> Facilities</a>
-        <a href="#section-users"><i data-lucide="users" style="width: 18px;"></i> Users</a>
-        <a href="#section-reports"><i data-lucide="bar-chart-3" style="width: 18px;"></i> Reports</a>
-        <div style="margin-top: 2rem; padding: 0 1.5rem;">
-           <small style="color: #475569; text-transform: uppercase; font-weight: 700; font-size: 0.7rem; letter-spacing: 1px;">Settings</small>
-        </div>
-        <a href="#section-settings"><i data-lucide="settings" style="width: 18px;"></i> System Settings</a>
-      </nav>
-    </aside>
-
-    <main class="admin-main">
-      <section id="section-stats">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-           <h2 style="margin: 0;">Dashboard Overview</h2>
-           <div id="lastUpdated" style="font-size: 0.8rem; color: #64748b;"></div>
-        </div>
-        
-        <div class="stat-grid" id="statGrid">
-          <!-- Skeletons here -->
-        </div>
-      </section>
-
-      <section id="section-bookings">
-        <div class="table-card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 style="margin: 0;">Recent Bookings</h3>
-            <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
-              <i data-lucide="download" style="width: 14px;"></i> Export CSV
-            </button>
-          </div>
-          <table id="bookingsTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>User</th>
-                <th>Facility</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="bookingsTbody">
-              <!-- Skeletons here -->
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="section-users">
-        <div class="table-card">
-          <h3 style="margin-bottom: 1.5rem;">Registered Users</h3>
-          <table id="usersTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Joined</th>
-              </tr>
-            </thead>
-            <tbody id="usersTbody">
-              <!-- Skeletons here -->
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+    <div class="stat-card">
+      <div class="skeleton" style="height: 12px; width: 50%; margin-bottom: 0.5rem;"></div>
+      <div class="skeleton" style="height: 24px; width: 70%;"></div>
+    </div>
+    <div class="stat-card">
+      <div class="skeleton" style="height: 12px; width: 50%; margin-bottom: 0.5rem;"></div>
+      <div class="skeleton" style="height: 24px; width: 70%;"></div>
+    </div>
   </div>
 
+  <div class="charts-container" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-top: 2rem;">
+    <div class="chart-card" style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+       <h3 style="margin-bottom: 1.5rem;">Monthly Revenue</h3>
+       <canvas id="revenueChart" height="250"></canvas>
+    </div>
+    <div class="chart-card" style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+       <h3 style="margin-bottom: 1.5rem;">Booking Status</h3>
+       <canvas id="statusChart" height="250"></canvas>
+    </div>
+  </div>
+
+  <div class="charts-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem; margin-bottom: 3rem;">
+    <div class="chart-card" style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+       <h3 style="margin-bottom: 1.5rem;">Facility Occupancy</h3>
+       <canvas id="occupancyChart" height="250"></canvas>
+    </div>
+    <div class="chart-card" style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+       <h3 style="margin-bottom: 1.5rem;">Category Usage</h3>
+       <canvas id="categoryChart" height="250"></canvas>
+    </div>
+  </div>
+
+  <!-- Reusable layout and dashboard logic -->
   <script src="/js/skeleton.js"></script>
+  <script src="/assets/js/admin-layout.js"></script>
   <script src="/admin/js/dashboard.js"></script>
-  <script>
-    lucide.createIcons();
-  </script>
 </body>
 </html>

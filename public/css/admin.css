@@ -113,17 +113,50 @@ tbody td { padding: .65rem .8rem; border-bottom: 1px solid #f1f5f9; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover td { background: #f8fafc; }
 
-/* ─── Status Badges ─────────────────────────────────────────────────────────── */
-.status-badge {
-  display: inline-block;
-  padding: .2rem .7rem;
-  border-radius: 12px;
-  font-size: .78rem;
-  font-weight: 600;
+/* ─── Admin Layout Injected via JS ─── */
+
+/* ─── Toolbar & Controls ─────────────────────────────────────────────────── */
+.toolbar { background: #fff; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05); margin-bottom: 2rem; }
+
+/* ─── Modal Overlay ───────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s;
 }
-.status-pending { background: #fef3c7; color: #92400e; }
-.status-approved { background: #d1fae5; color: #065f46; }
-.status-cancelled { background: #fee2e2; color: #991b1b; }
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: 0 20px 50px rgba(0,0,0,.3);
+  transform: translateY(20px);
+  transition: transform 0.3s;
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+
+/* ─── Stat Trends ────────────────────────────────────────────────────────── */
+.trend-up { color: #10b981; font-weight: 600; }
+.trend-down { color: #ef4444; font-weight: 600; }
+
+/* ─── Skeleton ───────────────────────────────────────────────────────────── */
+.skeleton {
+  background: #e2e8f0;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* ─── Helper Classes ─────────────────────────────────────────────────────── */
+.text-center { text-align: center; }
+.btn-block { display: block; width: 100%; }
 
 /* ─── Action Buttons ────────────────────────────────────────────────────────── */
 .btn-sm {

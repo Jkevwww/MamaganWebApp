@@ -240,3 +240,20 @@ Use this checklist to validate behavior end-to-end.
 - GitHub OAuth is documented in this repo; ensure backend routes/strategy exist before enabling GitHub.
 - For production OAuth cookies, `SESSION_SECRET` must be set, and `NODE_ENV=production` should be used.
 
+
+## PayMongo Setup
+
+To enable GCash payments, you must configure PayMongo:
+
+1.  Create a PayMongo account and get your API keys.
+2.  Add the following to your Render environment variables:
+    *   PAYMONGO_SECRET_KEY
+    *   PAYMONGO_PUBLIC_KEY
+    *   PAYMONGO_WEBHOOK_SECRET
+3.  Set up a Webhook in the PayMongo Dashboard:
+    *   Webhook URL: https://mamagan-booking-system.onrender.com/api/payments/paymongo/webhook
+    *   Events to monitor: checkout_session.payment.paid
+
+## Mock Payments
+
+For development, set MOCK_PAYMENTS=true. This allows you to simulate successful payments without a real PayMongo account.

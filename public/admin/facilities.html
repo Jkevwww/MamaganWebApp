@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Facilities - Mamagan Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="admin-body">
+
+  <div class="toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div class="search-filters" style="display: flex; gap: 1rem;">
+      <div class="search-box" style="position: relative;">
+        <i data-lucide="search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; color: #777;"></i>
+        <input type="text" id="facilitySearch" placeholder="Search facilities..." style="padding: 0.6rem 1rem 0.6rem 2.5rem; border: 1px solid #ddd; border-radius: 8px; width: 250px;">
+      </div>
+      <select id="categoryFilter" style="padding: 0.6rem; border: 1px solid #ddd; border-radius: 8px;">
+        <option value="">All Categories</option>
+        <option value="COTTAGE">Cottages</option>
+        <option value="CABANA">Cabanas</option>
+        <option value="BEACH_EQUIPMENT">Equipment</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="addFacilityBtn" style="display: flex; align-items: center; gap: 0.5rem;">
+      <i data-lucide="plus"></i> Add Facility
+    </button>
+  </div>
+
+  <div class="table-card">
+    <table id="facilitiesTable">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Price/Rate</th>
+          <th>Inventory</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="facilitiesTbody">
+        <!-- Loaded by JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Facility Modal -->
+  <div class="modal-overlay" id="facilityModal">
+    <div class="modal" style="max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 id="modalTitle">Add New Facility</h2>
+        <button id="closeModal" style="background:none; border:none; cursor:pointer;"><i data-lucide="x"></i></button>
+      </div>
+
+      <form id="facilityForm" enctype="multipart/form-data">
+        <input type="hidden" id="facilityId">
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <!-- Basic Info -->
+          <div>
+            <div class="form-group">
+              <label for="name">Facility Name</label>
+              <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+              <label for="category">Category</label>
+              <select id="category" name="category" required>
+                <option value="COTTAGE">Cottage</option>
+                <option value="CABANA">Cabana</option>
+                <option value="BEACH_EQUIPMENT">Beach Equipment</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="size">Size/Type</label>
+              <input type="text" id="size" name="size" placeholder="e.g. Small, Large, Standard">
+            </div>
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description" name="description" rows="4"></textarea>
+            </div>
+          </div>
+
+          <!-- Pricing & Capacity -->
+          <div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label for="inventory_count">Inventory (Units)</label>
+                <input type="number" id="inventory_count" name="inventory_count" value="1" min="0" required>
+              </div>
+              <div class="form-group">
+                <label for="rental_type">Rental Type</label>
+                <select id="rental_type" name="rental_type" required>
+                  <option value="FIXED">Fixed</option>
+                  <option value="HOURLY">Hourly</option>
+                  <option value="DAILY">Daily</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label for="capacity_min">Min Pax</label>
+                <input type="number" id="capacity_min" name="capacity_min" value="1" min="1">
+              </div>
+              <div class="form-group">
+                <label for="capacity_max">Max Pax</label>
+                <input type="number" id="capacity_max" name="capacity_max" value="1" min="1">
+              </div>
+            </div>
+
+            <!-- Rate Fields -->
+            <div id="rateFields">
+               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                 <div class="form-group">
+                   <label for="day_rate_min">Day Rate Min (₱)</label>
+                   <input type="number" id="day_rate_min" name="day_rate_min" value="0">
+                 </div>
+                 <div class="form-group">
+                   <label for="day_rate_max">Day Rate Max (₱)</label>
+                   <input type="number" id="day_rate_max" name="day_rate_max" value="0">
+                 </div>
+               </div>
+               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                 <div class="form-group">
+                   <label for="night_surcharge_min">Night Surcharge Min (₱)</label>
+                   <input type="number" id="night_surcharge_min" name="night_surcharge_min" value="0">
+                 </div>
+                 <div class="form-group">
+                   <label for="night_surcharge_max">Night Surcharge Max (₱)</label>
+                   <input type="number" id="night_surcharge_max" name="night_surcharge_max" value="0">
+                 </div>
+               </div>
+               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                 <div class="form-group">
+                   <label for="hourly_rate">Hourly Rate (₱)</label>
+                   <input type="number" id="hourly_rate" name="hourly_rate" value="0">
+                 </div>
+                 <div class="form-group">
+                   <label for="daily_rate">Daily Rate (₱)</label>
+                   <input type="number" id="daily_rate" name="daily_rate" value="0">
+                 </div>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
+
+        <!-- Image Section -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <div>
+            <div class="form-group">
+              <label for="image_url">Image URL (Link)</label>
+              <input type="text" id="image_url" name="image_url" placeholder="https://...">
+            </div>
+            <div class="form-group">
+              <label for="image_file">Or Upload Image</label>
+              <input type="file" id="image_file" name="image" accept="image/*">
+            </div>
+          </div>
+          <div id="imagePreviewContainer" style="text-align: center; background: #f8fafc; border-radius: 8px; padding: 1rem; border: 2px dashed #ddd;">
+             <p style="color: #94a3b8; font-size: 0.85rem;">Image Preview</p>
+             <img id="imagePreview" src="/mamagan-logo.svg" style="max-width: 100%; max-height: 150px; margin-top: 0.5rem; display: none;">
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+           <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+             <input type="checkbox" id="active" name="active" checked value="1"> Active (Visible)
+           </label>
+           <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+             <input type="checkbox" id="bookable" name="bookable" checked value="1"> Bookable
+           </label>
+           <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+             <input type="checkbox" id="restricted_during_peak_hours" name="restricted_during_peak_hours" value="1"> Peak Hour Restricted
+           </label>
+        </div>
+
+        <div class="form-group" style="margin-top: 1.5rem;">
+          <label for="unavailable_reason">Unavailable Reason (if unbookable)</label>
+          <input type="text" id="unavailable_reason" name="unavailable_reason">
+        </div>
+
+        <div class="modal-footer" style="margin-top: 3rem; display: flex; justify-content: flex-end; gap: 1rem;">
+          <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Save Facility</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/skeleton.js"></script>
+  <script src="/assets/js/admin-layout.js"></script>
+  <script src="/admin/js/facilities.js"></script>
+</body>
+</html>

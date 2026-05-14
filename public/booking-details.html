@@ -137,7 +137,9 @@
 
           <div style="display: flex; gap: 1rem; justify-content: center;">
             ${isPending ? `
-              <button class="btn btn-primary" style="padding: 0.8rem 2rem;">Pay Now via GCash</button>
+              <button id="payNowBtn" class="btn btn-primary" style="padding: 0.8rem 2rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="credit-card"></i> Pay Now via GCash
+              </button>
             ` : ''}
             ${b.payment_status === 'paid' ? `
               <a href="/view-ticket.html?id=${b.id}&facility=${encodeURIComponent(b.facility_name)}&date=${encodeURIComponent(new Date(b.date).toLocaleDateString())}&time=${encodeURIComponent(b.start_time.substring(0,5) + ' - ' + b.end_time.substring(0,5))}" class="btn btn-primary" style="padding: 0.8rem 2rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -145,12 +147,39 @@
               </a>
             ` : ''}
             ${b.status === 'pending' || b.status === 'approved' ? `
-              <button onclick="cancelBooking(${b.id})" class="btn btn-secondary" style="color: var(--error); border-color: var(--error); padding: 0.8rem 2rem;">Cancel Reservation</button>
+              <button id="cancelBookingBtn" onclick="cancelBooking(${b.id})" class="btn btn-secondary" style="color: var(--error); border-color: var(--error); padding: 0.8rem 2rem;">Cancel Reservation</button>
             ` : ''}
           </div>
         </div>
       `;
       lucide.createIcons();
+
+      if (document.getElementById('payNowBtn')) {
+        document.getElementById('payNowBtn').addEventListener('click', () => initiatePayment(b.id));
+      }
+    }
+
+    async function initiatePayment(bookingId) {
+      const btn = document.getElementById('payNowBtn');
+      btn.disabled = true;
+      btn.textContent = 'Preparing Checkout...';
+
+      try {
+        const res = await fetch('/api/payments/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Payment initiation failed');
+
+        // Redirect to PayMongo Checkout
+        window.location.href = data.checkout_url;
+      } catch (err) {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Pay Now via GCash';
+      }
     }
 
     async function cancelBooking(id) {

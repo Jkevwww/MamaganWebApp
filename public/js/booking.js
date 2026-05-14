@@ -49,7 +49,7 @@ function renderFacilityInfo() {
     <p style="color: #64748b; font-size: 1.1rem; margin-bottom: 1.5rem;">${escHtml(currentFacility.description)}</p>
     <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
       <span class="badge" style="background:#fff7ed; color:#9a3412;"><i data-lucide="users" style="width:14px; height:14px; vertical-align:middle;"></i> Up to ${currentFacility.capacity_max} pax</span>
-      <span class="badge" style="background:#f0f9ff; color:#0369a1;"><i data-lucide="package" style="width:14px; height:14px; vertical-align:middle;"></i> ${currentFacility.units} units available</span>
+      <span class="badge" style="background:#f0f9ff; color:#0369a1;"><i data-lucide="package" style="width:14px; height:14px; vertical-align:middle;"></i> ${currentFacility.inventory_count} units available</span>
       <span class="badge" style="background:#f1f5f9; color:#64748b;">${currentFacility.category}</span>
     </div>
   `;

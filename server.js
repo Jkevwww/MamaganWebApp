@@ -14,6 +14,7 @@ const authRoutes = require('./src/routes/auth.routes');
 const facilityRoutes = require('./src/routes/facility.routes');
 const adminRoutes = require('./src/routes/admin.routes');
 const googleAuthRoutes = require('./src/routes/googleAuth.routes');
+const paymentRoutes = require('./src/routes/payment.routes');
 
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
@@ -34,7 +35,13 @@ app.use(cors({
 }));
 
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl.startsWith('/api/payments/paymongo/webhook')) {
+      req.rawBody = buf.toString();
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // ─── OAuth (Passport) setup ───────────────────────────────────────────────
@@ -86,6 +93,7 @@ const authLimiter = rateLimit({
 
 // ─── Static Files ────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // ─── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
@@ -97,6 +105,7 @@ app.use('/api/auth/google', googleAuthRoutes);
 // (If CORS is configured differently elsewhere, adjust there.)
 app.use('/api/facilities', facilityRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payments', paymentRoutes);
 
 
 // ─── SPA Fallback: serve HTML for known frontend routes ──────────────────────

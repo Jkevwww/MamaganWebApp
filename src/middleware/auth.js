@@ -1,8 +1,22 @@
 const { verifyToken } = require('../utils/jwt');
 const { getTokenCookieName } = require('../utils/authCookie');
 
+function getToken(req) {
+  // 1. Check Cookie
+  const cookieName = getTokenCookieName();
+  if (req.cookies && req.cookies[cookieName]) {
+    return req.cookies[cookieName];
+  }
+  // 2. Check Authorization Header
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
+  return null;
+}
+
 function optionalAuth(req, res, next) {
-  const token = req.cookies?.[getTokenCookieName()];
+  const token = getToken(req);
   if (!token) return next();
 
   try {
@@ -10,13 +24,12 @@ function optionalAuth(req, res, next) {
     req.user = decoded;
     return next();
   } catch (err) {
-    // invalid cookie -> treat as not logged in
     return next();
   }
 }
 
 function requireAuth(req, res, next) {
-  const token = req.cookies?.[getTokenCookieName()];
+  const token = getToken(req);
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized: Not logged in' });
   }
@@ -31,14 +44,15 @@ function requireAuth(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  const token = req.cookies?.[getTokenCookieName()];
+  const token = getToken(req);
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized: Not logged in' });
   }
 
   try {
     const decoded = verifyToken(token);
-    if (!['admin', 'ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(decoded.role)) {
+    const adminRoles = ['admin', 'ADMIN', 'STAFF', 'SUPER_ADMIN'];
+    if (!adminRoles.includes(decoded.role)) {
       return res.status(403).json({ message: 'Forbidden: Admin access required' });
     }
     req.user = decoded;

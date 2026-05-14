@@ -77,12 +77,12 @@ async function loadFacilities() {
     }
 
     grid.innerHTML = facilities.map((f) => `
-      <div class="facility-card ${!f.is_bookable ? 'is-loading' : ''}">
+      <div class="facility-card ${!f.bookable ? 'is-loading' : ''}">
         <img src="${f.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'}" alt="${f.name}" loading="lazy" />
         <div class="card-body">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <h3 style="margin:0;">${escHtml(f.name)}</h3>
-            <span class="badge" style="background: #f1f5f9; color: #64748b;">${f.size}</span>
+            <span class="badge" style="background: #f1f5f9; color: #64748b;">${prettyCategory(f.category)}</span>
           </div>
           <p class="meta" style="margin-top:0.5rem; height: 3rem; overflow: hidden; text-overflow: ellipsis;">${escHtml(f.description || 'Experience the beauty of Mamagan.')}</p>
           <p class="price" style="margin-bottom:0.5rem;">
@@ -90,17 +90,17 @@ async function loadFacilities() {
             <small style="color:#777; font-weight:normal;"> / ${f.rental_type === 'FIXED' ? 'session' : f.rental_type === 'DAILY' ? 'day' : 'hour'}</small>
           </p>
           <div style="margin-bottom: 1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
-             <span class="badge ${f.is_available && f.is_bookable ? 'badge-available' : 'badge-unavailable'}">
-              ${f.is_available && f.is_bookable ? 'Available' : 'Unavailable'}
+             <span class="badge ${f.active && f.bookable ? 'badge-available' : 'badge-unavailable'}">
+              ${f.active && f.bookable ? 'Available' : 'Unavailable'}
             </span>
             <span class="badge" style="background:#fff7ed; color:#9a3412;"><i data-lucide="users" style="width:12px; height:12px; vertical-align:middle;"></i> ${f.capacity_min}-${f.capacity_max} pax</span>
-            <span class="badge" style="background:#f0f9ff; color:#0369a1;"><i data-lucide="package" style="width:12px; height:12px; vertical-align:middle;"></i> ${f.units} units</span>
+            <span class="badge" style="background:#f0f9ff; color:#0369a1;"><i data-lucide="package" style="width:12px; height:12px; vertical-align:middle;"></i> ${f.inventory_count} units</span>
           </div>
           
-          ${!f.is_bookable ? `<p style="color:var(--error); font-size:0.8rem; margin-bottom:1rem;">${f.unavailable_reason || 'Not bookable'}</p>` : ''}
+          ${!f.bookable ? `<p style="color:var(--error); font-size:0.8rem; margin-bottom:1rem;">${f.unavailable_reason || 'Not bookable'}</p>` : ''}
 
-          <a href="/booking.html?id=${f.id}" class="btn ${f.is_bookable ? 'btn-primary' : 'btn-secondary'} btn-block" ${!f.is_bookable ? 'style="pointer-events:none; opacity:0.5;"' : ''}>
-            ${f.is_bookable ? 'Book Now' : 'Currently Unavailable'}
+          <a href="/booking.html?id=${f.id}" class="btn ${f.bookable ? 'btn-primary' : 'btn-secondary'} btn-block" ${!f.bookable ? 'style="pointer-events:none; opacity:0.5;"' : ''}>
+            ${f.bookable ? 'Book Now' : 'Currently Unavailable'}
           </a>
         </div>
       </div>
@@ -130,6 +130,15 @@ document.getElementById('searchInput').addEventListener('input', () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(loadFacilities, 300);
 });
+
+function prettyCategory(cat) {
+  const map = {
+    'COTTAGE': 'Cottage',
+    'CABANA': 'Cabana',
+    'BEACH_EQUIPMENT': 'Equipment'
+  };
+  return map[cat] || cat;
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function escHtml(str) {

@@ -5,7 +5,7 @@ const { AppError } = require('../middleware/error');
  * Get all facilities with optional filters
  */
 async function getAllFacilities(filters = {}) {
-  let query = 'SELECT * FROM facilities WHERE 1=1';
+  let query = 'SELECT * FROM facilities WHERE active = 1';
   const params = [];
 
   if (filters.category) {
@@ -14,7 +14,7 @@ async function getAllFacilities(filters = {}) {
   }
 
   if (filters.is_bookable !== undefined) {
-    query += ' AND is_bookable = ?';
+    query += ' AND bookable = ?';
     params.push(filters.is_bookable ? 1 : 0);
   }
 
@@ -53,7 +53,7 @@ async function getFacilityById(id) {
 async function checkAvailability(facilityId, date, startTime, endTime, quantity = 1) {
   const facility = await getFacilityById(facilityId);
 
-  if (!facility.is_bookable) {
+  if (!facility.bookable || !facility.active) {
     return { 
       available: false, 
       reason: facility.unavailable_reason || 'Facility is not available for booking' 
@@ -75,23 +75,20 @@ async function checkAvailability(facilityId, date, startTime, endTime, quantity 
     };
   }
 
-  // 2. Check Beach Equipment Peak Hours (Task: "Cannot be rented during peak hours")
-  // Let's define peak hours as 11:00 AM to 2:00 PM for equipment
-  if (facility.category === 'Equipment') {
+  // 2. Check Beach Equipment Peak Hours
+  if (facility.restricted_during_peak_hours) {
     const startHour = parseInt(startTime.split(':')[0]);
     const endHour = parseInt(endTime.split(':')[0]);
-    
     const isPeak = (h) => (h >= 11 && h < 14);
     if (isPeak(startHour) || isPeak(endHour - 1)) {
        return {
          available: false,
-         reason: 'Beach equipment cannot be rented during peak hours (11AM - 2PM)'
+         reason: 'This facility cannot be rented during peak hours (11AM - 2PM)'
        };
     }
   }
 
   // 3. Check existing bookings for inventory count
-  // We check for overlapping bookings that are NOT cancelled
   const [bookings] = await pool.query(
     `SELECT SUM(quantity) as total_booked FROM bookings
      WHERE facility_id = ? AND date = ? AND status NOT IN ('cancelled', 'failed', 'refunded')
@@ -100,7 +97,7 @@ async function checkAvailability(facilityId, date, startTime, endTime, quantity 
   );
 
   const totalBooked = parseInt(bookings[0].total_booked || 0);
-  const remaining = facility.units - totalBooked;
+  const remaining = facility.inventory_count - totalBooked;
 
   if (remaining < quantity) {
     return {
@@ -121,27 +118,24 @@ function calculateTotal(facility, { quantity, guest_count, startTime, endTime, b
   quantity = parseInt(quantity) || 1;
   guest_count = parseInt(guest_count) || 1;
 
-  if (facility.category === 'Cottage') {
-    // price_min used for fixed, otherwise average or min
+  if (facility.category === 'COTTAGE') {
     total = facility.price_min * quantity;
   } 
-  else if (facility.category === 'Room') {
+  else if (facility.category === 'CABANA') {
     total = facility.price_min * quantity;
-    // Surcharge for NIGHT booking (Task: Add ₱200 or ₱500 depending on number of persons)
     if (bookingType === 'NIGHT') {
       const surcharge = guest_count > 6 ? 500 : 200;
       total += (surcharge * quantity);
     }
   } 
-  else if (facility.category === 'Equipment') {
-    if (bookingType === 'HOURLY') {
+  else if (facility.category === 'BEACH_EQUIPMENT') {
+    if (facility.rental_type === 'HOURLY') {
       const start = new Date(`1970-01-01T${startTime}`);
       const end = new Date(`1970-01-01T${endTime}`);
       const hours = Math.ceil((end - start) / (1000 * 60 * 60));
       total = facility.price_min * hours * quantity;
     } else {
-      // DAILY
-      total = facility.price_max * quantity; // Assuming price_max is the daily rate for equipment
+      total = facility.price_max * quantity; 
     }
   }
 
@@ -154,7 +148,6 @@ function calculateTotal(facility, { quantity, guest_count, startTime, endTime, b
 async function bookFacility({ facilityId, userId, date, start_time, end_time, quantity, guest_count, notes, bookingType }) {
   const facility = await getFacilityById(facilityId);
   
-  // Validation guest count
   if (guest_count > (facility.capacity_max * quantity)) {
     throw new AppError(`Guest count exceeds maximum capacity (${facility.capacity_max * quantity} pax)`, 400);
   }
@@ -165,8 +158,7 @@ async function bookFacility({ facilityId, userId, date, start_time, end_time, qu
   }
 
   const total_amount = calculateTotal(facility, { quantity, guest_count, startTime: start_time, endTime: end_time, bookingType });
-
-  const expires_at = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+  const expires_at = new Date(Date.now() + 15 * 60 * 1000); 
 
   const conn = await pool.getConnection();
   await conn.beginTransaction();
@@ -186,12 +178,7 @@ async function bookFacility({ facilityId, userId, date, start_time, end_time, qu
     );
 
     await conn.commit();
-    return { 
-      bookingId: result.insertId, 
-      status: 'pending', 
-      total_amount,
-      expires_at 
-    };
+    return { bookingId: result.insertId, status: 'pending', total_amount, expires_at };
   } catch (err) {
     await conn.rollback();
     throw err;
