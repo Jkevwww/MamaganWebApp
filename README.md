@@ -1,259 +1,216 @@
-# Mamagan Web Application (Facility Booking)
+# Mamagan Fun & Adventure Beach Resort — Online Booking & Payment (GCash via PayMongo)
 
-A facility booking and management system built with **Node.js + Express** and **MySQL**. It supports local authentication (email/password) and OAuth (Google; GitHub documented for future wiring).
+Resort guests can register, sign in (email/password or OAuth), browse facilities, book, pay through PayMongo (GCash and other methods), and receive QR tickets. Staff use an admin panel for facilities, bookings, rates, calendar, check-in, and reports.
 
-## Tech Stack
-
-- **Frontend:** HTML, CSS, Vanilla JavaScript
-- **Backend:** Node.js + Express
-- **Auth:** JWT (app auth) + Passport OAuth (session for OAuth state)
-- **Database:** MySQL (Aiven cloud)
-- **Deployment:** Render
+**Stack:** Node.js + Express, MySQL (mysql2/promise, Aiven-ready SSL), plain HTML/CSS/vanilla JS frontend, deployment on **Render**.
 
 ---
 
-## Local Setup
+## Repository layout
 
-### 1) Install dependencies
+| Area | Location |
+|------|----------|
+| Express entry | `server.js` |
+| Backend (routes, controllers, services, middleware, config, utils) | `src/` |
+| Static site (guest + admin HTML/CSS/JS) | `public/` |
+| SQL migrations + runner + seed | `database/` |
+| Diagrams | `docs/` |
+
+---
+
+## Local setup
+
+### 1) Install
+
 ```bash
 npm install
 ```
 
-### 2) Configure environment
-Copy and edit the template:
+### 2) Environment
+
+Copy the template and fill in values (never commit `.env`):
+
 ```bash
 cp .env.example .env
 ```
-Then fill in:
-- `MYSQL_*` (Aiven MySQL credentials)
-- `MYSQL_SSL_CA` (see next section)
-- `JWT_SECRET`
-- `SESSION_SECRET`
-- `ADMIN_EMAIL`, `ADMIN_PASSWORD`
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 
-> Note: The runtime `PORT` defaults to `3000` when running locally. For Render compatibility, use `PORT=10000`.
+Important variables:
 
----
+- **Server:** `NODE_ENV`, `PORT` (default in code is `10000` if unset), `SERVER_URL`, `CLIENT_URL`
+- **Auth:** `JWT_SECRET`, `SESSION_SECRET` (session store is used for OAuth state only; app auth is JWT in an HTTP-only cookie)
+- **MySQL:** `MYSQL_*`, `MYSQL_SSL_CA` for Aiven
+- **OAuth:** Google and GitHub client IDs/secrets and callback URLs (see below)
+- **Redirects:** `OAUTH_SUCCESS_*`, `OAUTH_FAILURE_REDIRECT` (must be **relative paths** starting with `/` to avoid open redirects)
+- **PayMongo:** `PAYMONGO_*`, `MOCK_PAYMENTS` for local testing
 
-## Aiven MySQL Setup (SSL)
+### 3) Database
 
-This project supports MySQL over SSL using `MYSQL_SSL_CA`.
-
-### How to set `MYSQL_SSL_CA`
-Aiven provides a CA certificate. Put it into your env var in one of these formats:
-
-**Option A (common): keep `\n` line breaks in the env var**
-```env
-MYSQL_SSL_CA=-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----
-```
-
-**Option B: paste the literal PEM with actual newlines**
-```env
-MYSQL_SSL_CA=-----BEGIN CERTIFICATE-----
-MIID...
------END CERTIFICATE-----
-```
-
-The server code converts `\\n` into real newlines automatically.
-
----
-
-## Database Migrations and Seeding
-
-### Run migrations
 ```bash
 npm run db:migrate
-```
-
-### Seed database
-```bash
 npm run db:seed
 ```
 
----
+Migrations are additive where possible; new OAuth and logging columns use `CREATE TABLE IF NOT EXISTS` / conditional `ALTER` patterns. Review `database/migrations/` if you maintain a long-lived production database.
 
-## Run Locally
+### 4) Run
 
-### Development (auto-reload)
 ```bash
 npm run dev
 ```
 
-### Production mode (no auto-reload)
+Production-style:
+
 ```bash
 npm start
 ```
 
----
-
-## Environment Variables
-
-At minimum, set these in `.env` (and in Render):
-
-- **Node/Server**
-  - `NODE_ENV`
-  - `PORT`
-  - `SERVER_URL`
-  - `CLIENT_URL`
-
-- **Auth**
-  - `JWT_SECRET`
-  - `SESSION_SECRET`
-
-- **MySQL (Aiven)**
-  - `MYSQL_HOST`
-  - `MYSQL_PORT`
-  - `MYSQL_USER`
-  - `MYSQL_PASSWORD`
-  - `MYSQL_DATABASE`
-  - `MYSQL_SSL_CA`
-
-- **Admin bootstrap**
-  - `ADMIN_EMAIL`
-  - `ADMIN_PASSWORD`
-
-- **Google OAuth**
-  - `GOOGLE_CLIENT_ID`
-  - `GOOGLE_CLIENT_SECRET`
-  - `GOOGLE_CALLBACK_URL`
-  - `OAUTH_SUCCESS_GUEST_REDIRECT`
-  - `OAUTH_SUCCESS_ADMIN_REDIRECT`
-  - `OAUTH_FAILURE_REDIRECT`
-
-- **GitHub OAuth (documentation only unless code is added)**
-  - `GITHUB_CLIENT_ID`
-  - `GITHUB_CLIENT_SECRET`
-  - `GITHUB_CALLBACK_URL`
+Default local URL when `PORT=10000`: `http://localhost:10000`
 
 ---
 
-## Default Admin Account
+## Authentication
 
-The system can create/recognize a default admin account using environment variables:
-- `ADMIN_EMAIL`
-- `ADMIN_PASSWORD`
+### Email / password
 
----
+- Passwords are hashed with **bcrypt** (`bcrypt` package).
+- `POST /api/auth/register` — creates **GUEST** users.
+- `POST /api/auth/login` — sets JWT in **HTTP-only** cookie (`auth_token`), `sameSite=lax`, `secure` in production.
+- `GET /api/auth/me` — returns the current user (requires cookie or `Authorization: Bearer`).
+- `POST /api/auth/logout` — clears the JWT cookie and Passport session; logs `LOGOUT` when possible.
 
-## Local Email/Password Auth
+### Google OAuth (Passport)
 
-End points:
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `POST /api/auth/logout` (front-end logout flow)
+Routes:
 
----
+- `GET /api/auth/google` — starts OAuth
+- `GET /api/auth/google/callback` — completes OAuth, sets JWT cookie, redirects
 
-## Google OAuth Setup
+**Google Cloud Console**
 
-### 1) Create OAuth credentials
-- Google Cloud Console → **APIs & Services** → **Credentials**
-- Create OAuth **Client ID** (Web application)
+1. Create a project (or use an existing one) → **APIs & Services** → **Credentials**.
+2. **Create credentials** → **OAuth client ID** → Application type: **Web application**.
+3. Under **Authorized redirect URIs**, add:
+   - Local: `http://localhost:10000/api/auth/google/callback`
+   - Render: `https://YOUR-RENDER-APP.onrender.com/api/auth/google/callback`
+4. Copy **Client ID** and **Client secret** into environment variables:
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `GOOGLE_CALLBACK_URL` (must match the redirect URI host/path exactly)
 
-### 2) Configure callback URL
-Set the authorized redirect URI(s) to match your environment.
+**Behavior**
 
-For Render, use:
-- `https://YOUR-RENDER-APP.onrender.com/api/auth/google/callback`
+- Uses a **verified** Google email only.
+- If the email already exists, the Google account is **linked** (`oauth_accounts`); **role** and **access_tier** are not upgraded by OAuth.
+- New users are **GUEST** with `password_hash` NULL.
+- Inactive users (`active` false) cannot complete OAuth.
 
-(For local testing you can use your local base URL.)
+### GitHub OAuth (Passport)
 
-### 3) Configure env vars
+Routes:
+
+- `GET /api/auth/github`
+- `GET /api/auth/github/callback`
+
+**GitHub → Settings → Developer settings → OAuth Apps → New OAuth App**
+
+- **Homepage URL:** `http://localhost:10000` (local) or your Render URL in production.
+- **Authorization callback URL** must match how GitHub routes callbacks:
+  - Local: `http://localhost:10000/api/auth/github/callback`
+  - Production: `https://YOUR-RENDER-APP.onrender.com/api/auth/github/callback`
+
 Set:
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_CALLBACK_URL`
 
----
-
-## GitHub OAuth Setup
-
-This repository documents GitHub OAuth environment variables and redirect URLs:
 - `GITHUB_CLIENT_ID`
 - `GITHUB_CLIENT_SECRET`
 - `GITHUB_CALLBACK_URL`
 
-> If GitHub OAuth routes/strategy are not present in the backend, requests to `/api/auth/github/...` will not work until GitHub OAuth is implemented.
+**GitHub callback limitation:** each OAuth app allows **one** callback URL. For both local and Render you typically create **two** OAuth apps (development and production) with the same scopes, and use different env files / Render env groups.
+
+**Email rules**
+
+- Primary source: verified emails from the GitHub profile when present.
+- If missing, the server calls `https://api.github.com/user/emails` with the short-lived OAuth access token and picks a **verified** email (prefer primary). Tokens are **not** stored in the database.
+
+### Admin OAuth
+
+The admin login page offers the same Google/GitHub links. **OAuth never creates an admin:** a Google/GitHub sign-in only reaches the admin dashboard if the linked user already has an admin/staff role for that email.
+
+### Optional route
+
+- `GET /api/auth/oauth/failure` — redirects to `OAUTH_FAILURE_REDIRECT` (default `/login.html?error=oauth_failed`).
+
+### Security middleware
+
+- **Helmet** enabled globally.
+- **Stricter** `express-rate-limit` on `POST /api/auth/login` and `POST /api/auth/register`; lighter limit on other `/api/auth` traffic.
+- CORS uses `CLIENT_URL` (comma-separated list allowed) with `credentials: true`.
 
 ---
 
-## Render Deployment Setup (Render Compatibility)
+## Aiven MySQL (SSL)
 
-### Required Render runtime settings
-This app is compatible with Render when the following are set:
-
-- `NODE_ENV=production`
-- `PORT=10000`
-- MySQL `MYSQL_*` variables
-- `MYSQL_SSL_CA`
-- `JWT_SECRET` and `SESSION_SECRET`
-- OAuth variables for Google (and optionally GitHub)
-
-### Where redirects point
-Set:
-- `SERVER_URL=https://YOUR-RENDER-APP.onrender.com`
-- `CLIENT_URL=https://YOUR-RENDER-APP.onrender.com`
-
-OAuth redirect paths:
-- `OAUTH_SUCCESS_GUEST_REDIRECT=/facilities.html`
-- `OAUTH_SUCCESS_ADMIN_REDIRECT=/admin/dashboard.html`
-- `OAUTH_FAILURE_REDIRECT=/login.html?error=oauth_failed`
+Set `MYSQL_SSL_CA` to the CA PEM. You may use literal `\n` in a single-line env value; the app replaces `\\n` with real newlines before passing to mysql2 (see `src/config/db.js` and `database/db-config.js`).
 
 ---
 
-## Testing Checklist (Final)
+## Render deployment
 
-Use this checklist to validate behavior end-to-end.
+`render.yaml` is included as a template. Set:
 
-### Auth: Local
-- [ ] Local email/password register works (`/api/auth/register`)
-- [ ] Local email/password login works (`/api/auth/login`)
-- [ ] `/api/auth/me` returns current user after login
-- [ ] Logout clears auth state
+- `NODE_ENV=production`, `PORT=10000`
+- `SERVER_URL` and `CLIENT_URL` to `https://YOUR-RENDER-APP.onrender.com`
+- `GOOGLE_CALLBACK_URL` / `GITHUB_CALLBACK_URL` with the same host
+- All secrets (`JWT_SECRET`, `SESSION_SECRET`, MySQL, OAuth, PayMongo) in the Render dashboard (`sync: false` placeholders in YAML)
 
-### Auth: Account status
-- [ ] Disabled user login is blocked (inactive users cannot authenticate)
-
-### Auth: Google OAuth
-- [ ] Google OAuth login completes successfully
-- [ ] Existing admin Google account logs in as admin (admin route access)
-- [ ] New OAuth user becomes `GUEST`
-
-### Auth: GitHub OAuth
-- [ ] GitHub OAuth login completes successfully **if backend is implemented**
-
-### Routes / Security
-- [ ] Direct frontend page visits work (static `public/*.html` served correctly)
-- [ ] Admin route protection works (non-admin cannot access `/api/admin/*`)
-- [ ] `/api/auth/me` returns 401/unauthorized when not authenticated
-
-### Database / Deployment
-- [ ] Aiven MySQL connection succeeds with `MYSQL_SSL_CA`
-- [ ] Render environment variables are present and correct
+Build: `npm install` — Start: `npm start`
 
 ---
 
-## Notes / Warnings
+## System logs
 
-- GitHub OAuth is documented in this repo; ensure backend routes/strategy exist before enabling GitHub.
-- For production OAuth cookies, `SESSION_SECRET` must be set, and `NODE_ENV=production` should be used.
+Login, logout, and OAuth events are written to `system_logs` when the table exists (see migrations `013` and `014`). Actions include for example `LOCAL_LOGIN_SUCCESS`, `GOOGLE_LOGIN_SUCCESS`, `GITHUB_LOGIN_FAILED`, `OAUTH_ACCOUNT_LINKED`, `USER_CREATED_FROM_OAUTH`, and `LOGOUT`. Timestamps are stored in `created_at`.
 
+---
 
-## PayMongo Setup
+## API summary (auth)
 
-To enable GCash payments, you must configure PayMongo:
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/auth/register` | Register |
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/logout` | Logout |
+| GET | `/api/auth/me` | Current user |
+| GET | `/api/auth/google` | Start Google OAuth |
+| GET | `/api/auth/google/callback` | Google callback |
+| GET | `/api/auth/github` | Start GitHub OAuth |
+| GET | `/api/auth/github/callback` | GitHub callback |
+| GET | `/api/auth/oauth/failure` | Safe failure redirect |
 
-1.  Create a PayMongo account and get your API keys.
-2.  Add the following to your Render environment variables:
-    *   PAYMONGO_SECRET_KEY
-    *   PAYMONGO_PUBLIC_KEY
-    *   PAYMONGO_WEBHOOK_SECRET
-3.  Set up a Webhook in the PayMongo Dashboard:
-    *   Webhook URL: https://mamagan-booking-system.onrender.com/api/payments/paymongo/webhook
-    *   Events to monitor: checkout_session.payment.paid
+---
 
-## Mock Payments
+## PayMongo (GCash)
 
-For development, set MOCK_PAYMENTS=true. This allows you to simulate successful payments without a real PayMongo account.
+1. Create a PayMongo account and obtain API keys.
+2. Set `PAYMONGO_SECRET_KEY`, `PAYMONGO_PUBLIC_KEY`, and `PAYMONGO_WEBHOOK_SECRET` in the environment.
+3. Configure a webhook in the PayMongo dashboard pointing at your deployed URL, for example:  
+   `https://YOUR-RENDER-APP.onrender.com/api/payments/paymongo/webhook`  
+   and subscribe to checkout events you handle in code.
+
+For local development without PayMongo, set `MOCK_PAYMENTS=true`.
+
+---
+
+## Documentation
+
+- PlantUML use case diagram: `docs/use-case-diagram.puml` (actors: Guest, Staff/Admin, PayMongo, System Administrator).
+
+---
+
+## Scripts
+
+| Script | Command |
+|--------|---------|
+| Start (production) | `npm start` |
+| Dev (nodemon) | `npm run dev` |
+| Migrations | `npm run db:migrate` |
+| Seed | `npm run db:seed` |

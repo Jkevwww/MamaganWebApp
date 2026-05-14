@@ -1,6 +1,6 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const { getConnectionOptions } = require('./db-config');
 
 const FACILITIES = [
@@ -185,7 +185,11 @@ async function seed() {
   const [existingAdmin] = await conn.query('SELECT id FROM users WHERE email = ?', [adminEmail]);
   if (existingAdmin.length === 0) {
     const hashed = await bcrypt.hash(adminPass, 10);
-    await conn.query('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)', ['Administrator', adminEmail, hashed, 'admin']);
+    await conn.query(
+      `INSERT INTO users (name, email, phone, password_hash, password, role, access_tier, active)
+       VALUES (?, ?, ?, ?, NULL, 'ADMIN', 'ADMIN', 1)`,
+      ['Administrator', adminEmail, '', hashed]
+    );
     console.log('  ✅ Admin user created');
   }
 

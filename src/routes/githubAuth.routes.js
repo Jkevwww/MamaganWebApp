@@ -4,7 +4,7 @@ const oauthController = require('../controllers/oauth.controller');
 
 const router = express.Router();
 
-router.get('/', oauthController.googleStart);
-router.get('/callback', oauthController.googleCallback);
+router.get('/', oauthController.githubStart);
+router.get('/callback', oauthController.githubCallback);
 
 module.exports = router;

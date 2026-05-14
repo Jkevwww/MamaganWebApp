@@ -158,6 +158,19 @@ tbody tr:hover td { background: #f8fafc; }
 .text-center { text-align: center; }
 .btn-block { display: block; width: 100%; }
 
+/* ─── Page Placeholder ───────────────────────────────────────────────────── */
+.page-placeholder {
+  padding: 3rem;
+  text-align: center;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,.05);
+}
+.page-placeholder p {
+  color: #64748b;
+  margin-top: 1rem;
+}
+
 /* ─── Action Buttons ────────────────────────────────────────────────────────── */
 .btn-sm {
   padding: .25rem .7rem;
@@ -191,6 +204,30 @@ tbody tr:hover td { background: #f8fafc; }
 }
 .admin-login-card h1 { font-size: 1.5rem; color: #1e293b; margin-bottom: .3rem; }
 .admin-login-card .subtitle { color: #64748b; font-size: .88rem; margin-bottom: 1.8rem; }
+
+.admin-oauth-hint {
+  margin-top: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #64748b;
+  text-align: center;
+}
+
+.admin-oauth-divider {
+  margin-top: 1.25rem;
+}
+
+.admin-oauth-divider hr {
+  border-top-color: rgba(148, 163, 184, 0.35);
+}
+
+.admin-login-card .btn-google {
+  border-color: #cbd5e1;
+}
+
+.admin-login-card .oauth-divider span {
+  color: #94a3b8;
+}
 
 /* ─── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {

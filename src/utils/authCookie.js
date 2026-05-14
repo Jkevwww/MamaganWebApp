@@ -15,5 +15,15 @@ function getTokenCookieName() {
   return TOKEN_COOKIE_NAME;
 }
 
-module.exports = { getCookieOptions, getTokenCookieName };
+function getClearCookieOptions() {
+  const o = getCookieOptions();
+  return {
+    path: o.path,
+    httpOnly: o.httpOnly,
+    secure: o.secure,
+    sameSite: o.sameSite,
+  };
+}
+
+module.exports = { getCookieOptions, getTokenCookieName, getClearCookieOptions };
 

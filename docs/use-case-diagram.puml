@@ -66,6 +66,9 @@ Guest --> UC_CreateBooking
 Guest --> UC_ViewMyBookings
 Guest --> UC_Logout
 
+Staff --> UC_Login
+Staff --> UC_Google
+Staff --> UC_GitHub
 Staff --> UC_ManageFacilities
 Staff --> UC_ManageBookings
 Staff --> UC_ManageRatesPromos

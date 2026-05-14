@@ -1,5 +1,13 @@
 const authService = require('../services/auth.service');
-const { getCookieOptions, getTokenCookieName } = require('../utils/authCookie');
+const { getCookieOptions, getTokenCookieName, getClearCookieOptions } = require('../utils/authCookie');
+const { logSystemAction } = require('../utils/logger');
+
+function reqMeta(req) {
+  return {
+    ipAddress: req.ip || req.connection?.remoteAddress || null,
+    userAgent: req.headers['user-agent'] || null,
+  };
+}
 
 function validateRegisterBody({ name, email, phone, password }) {
   if (!name || typeof name !== 'string' || name.trim().length < 2) {
@@ -38,6 +46,10 @@ async function register(req, res, next) {
 }
 
 async function login(req, res, next) {
+  const { ipAddress, userAgent } = reqMeta(req);
+  const rawEmail = req.body?.email;
+  const emailNorm = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
+
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -45,20 +57,62 @@ async function login(req, res, next) {
     }
 
     const { token, user } = await authService.login({
-      email: email.trim().toLowerCase(),
+      email: emailNorm,
       password,
+    });
+
+    await logSystemAction({
+      userId: user.id,
+      action: 'LOCAL_LOGIN_SUCCESS',
+      module: 'AUTH',
+      targetType: 'users',
+      targetId: String(user.id),
+      details: { method: 'password' },
+      ipAddress,
+      userAgent,
     });
 
     res.cookie(getTokenCookieName(), token, { ...getCookieOptions() });
     return res.status(200).json({ user });
   } catch (err) {
+    await logSystemAction({
+      userId: null,
+      action: 'LOCAL_LOGIN_FAILED',
+      module: 'AUTH',
+      targetType: 'users',
+      targetId: null,
+      details: { email: emailNorm || null, message: err.message },
+      ipAddress,
+      userAgent,
+    });
     next(err);
   }
 }
 
 async function logout(req, res, next) {
   try {
-    res.clearCookie(getTokenCookieName(), { path: '/' });
+    const { ipAddress, userAgent } = reqMeta(req);
+    const userId = req.user?.id ?? null;
+
+    await logSystemAction({
+      userId,
+      action: 'LOGOUT',
+      module: 'AUTH',
+      targetType: 'users',
+      targetId: userId != null ? String(userId) : null,
+      details: { method: 'cookie' },
+      ipAddress,
+      userAgent,
+    });
+
+    res.clearCookie(getTokenCookieName(), getClearCookieOptions());
+
+    if (typeof req.logout === 'function') {
+      await new Promise((resolve) => {
+        req.logout(() => resolve());
+      });
+    }
+
     return res.status(200).json({ message: 'Logged out' });
   } catch (err) {
     next(err);
@@ -75,4 +129,3 @@ async function getMe(req, res, next) {
 }
 
 module.exports = { register, login, logout, getMe };
-

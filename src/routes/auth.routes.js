@@ -1,21 +1,27 @@
 const express = require('express');
-const router = express.Router();
+const rateLimit = require('express-rate-limit');
+
 const authController = require('../controllers/auth.controller');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { oauthFailureRedirect } = require('../utils/safeRedirect');
 
-// POST /api/auth/register
-router.post('/register', authController.register);
+const loginRegisterLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many login attempts. Please try again later.' },
+});
 
+const router = express.Router();
 
-// POST /api/auth/login
-router.post('/login', authController.login);
-
-// POST /api/auth/logout
-router.post('/logout', authController.logout);
-
-// GET /api/auth/me
+router.post('/register', loginRegisterLimiter, authController.register);
+router.post('/login', loginRegisterLimiter, authController.login);
+router.post('/logout', optionalAuth, authController.logout);
 router.get('/me', requireAuth, authController.getMe);
 
+router.get('/oauth/failure', (req, res) => {
+  res.redirect(oauthFailureRedirect());
+});
+
 module.exports = router;
-
-

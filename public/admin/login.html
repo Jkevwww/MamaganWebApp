@@ -7,6 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/google_oauth.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body style="background: #0f172a;">
@@ -32,6 +33,19 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Authenticate</button>
       </form>
+
+      <p class="admin-oauth-hint">OAuth sign-in only works if your Google or GitHub account uses an email that already exists as an admin or staff user in this system.</p>
+
+      <div class="oauth-divider admin-oauth-divider">
+        <hr>
+        <span>or</span>
+        <hr>
+      </div>
+
+      <div class="oauth-stack">
+        <a class="btn btn-google btn-block" href="/api/auth/google">Continue with Google</a>
+        <a class="btn btn-github btn-block" href="/api/auth/github">Continue with GitHub</a>
+      </div>
       
       <div class="text-center" style="margin-top: 1.5rem;">
         <a href="/" style="font-size: 0.85rem; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
