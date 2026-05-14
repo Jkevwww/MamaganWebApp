@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Ticket - Mamagan</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body style="background: #f1f5f9;">
+
+  <div class="container" style="max-width: 500px; padding-top: 3rem;">
+    <div class="text-center" style="margin-bottom: 2rem;">
+       <a href="/"><img src="/mamagan-logo.svg" alt="Mamagan Logo" height="60"></a>
+    </div>
+
+    <div class="ticket-card" style="background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.1);">
+      <div style="background: var(--primary); color: #fff; padding: 1.5rem; text-align: center;">
+        <h2 style="margin: 0; font-size: 1.5rem;">Booking Confirmation</h2>
+        <p style="margin: 0.5rem 0 0; opacity: 0.8; font-size: 0.9rem;">Show this QR code upon arrival</p>
+      </div>
+      
+      <div style="padding: 2rem; text-align: center;">
+        <div id="qr-container" style="margin-bottom: 2rem; display: inline-block; padding: 1rem; border: 2px dashed #ddd; border-radius: 15px;">
+           <!-- Placeholder for QR code -->
+           <i data-lucide="qr-code" style="width: 150px; height: 150px; color: #334155;"></i>
+        </div>
+        
+        <div style="text-align: left; background: #f8fafc; border-radius: 12px; padding: 1.5rem;">
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between;">
+             <span style="color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Facility</span>
+             <span id="ticketFacility" style="font-weight: 700;">Loading...</span>
+          </div>
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between;">
+             <span style="color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Date</span>
+             <span id="ticketDate" style="font-weight: 700;">Loading...</span>
+          </div>
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between;">
+             <span style="color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Time</span>
+             <span id="ticketTime" style="font-weight: 700;">Loading...</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+             <span style="color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Booking ID</span>
+             <span id="ticketID" style="font-weight: 700;">#0000</span>
+          </div>
+        </div>
+      </div>
+      
+      <div style="border-top: 1px dashed #ddd; padding: 1.5rem; text-align: center;">
+        <button onclick="window.print()" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem; margin: 0 auto;">
+          <i data-lucide="printer" style="width: 18px;"></i> Print Ticket
+        </button>
+        <a href="/my-bookings.html" style="display: block; margin-top: 1rem; font-size: 0.9rem; color: #64748b;">Back to My Bookings</a>
+      </div>
+    </div>
+    
+    <div style="margin-top: 2rem; text-align: center; color: #64748b; font-size: 0.8rem;">
+      <p>Thank you for choosing Mamagan Fun & Adventure Beach Resort!</p>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    
+    // Simple logic to fill ticket info from URL params
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById('ticketFacility').textContent = params.get('facility') || 'N/A';
+    document.getElementById('ticketDate').textContent = params.get('date') || 'N/A';
+    document.getElementById('ticketTime').textContent = params.get('time') || 'N/A';
+    document.getElementById('ticketID').textContent = '#' + (params.get('id') || '0000').padStart(4, '0');
+  </script>
+</body>
+</html>

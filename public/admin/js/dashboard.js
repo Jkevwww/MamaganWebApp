@@ -1,17 +1,9 @@
 /* ─── Admin Dashboard JS ────────────────────────────────────────────────────── */
 
-// Skeleton helpers (optional)
 const skeleton = window.Skeleton;
-
-// Auth guard – admin only
 const token = localStorage.getItem('token');
-
-if (!window.Skeleton) {
-  // Skeleton script might be missing; avoid runtime errors.
-}
-
-
 const user = JSON.parse(localStorage.getItem('user') || '{}');
+
 if (!token || user.role !== 'admin') {
   window.location.replace('/admin/login.html');
 }
@@ -30,22 +22,41 @@ const authHeader = { Authorization: `Bearer ${token}` };
 
 // ─── Load Stats ─────────────────────────────────────────────────────────────
 async function loadStats() {
-  // Render skeletons immediately
   const statGrid = document.getElementById('statGrid');
-  if (skeleton?.renderStatSkeleton && statGrid) skeleton.renderStatSkeleton(statGrid, 4);
+  if (skeleton?.renderStatSkeleton && statGrid) {
+    skeleton.renderStatSkeleton(statGrid, 4);
+  }
 
   try {
     const res = await fetch('/api/admin/stats', { headers: authHeader });
     if (res.status === 401 || res.status === 403) {
-      localStorage.clear();
       window.location.replace('/admin/login.html');
       return;
     }
     const data = await res.json();
-    document.getElementById('statUsers').textContent = data.totalUsers ?? '–';
-    document.getElementById('statFacilities').textContent = data.totalFacilities ?? '–';
-    document.getElementById('statBookings').textContent = data.totalBookings ?? '–';
-    document.getElementById('statPending').textContent = data.pendingBookings ?? '–';
+    
+    statGrid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Total Users</div>
+        <div class="stat-value">${data.totalUsers ?? 0}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Facilities</div>
+        <div class="stat-value">${data.totalFacilities ?? 0}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Bookings</div>
+        <div class="stat-value">${data.totalBookings ?? 0}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label" style="color: var(--orange);">Pending Bookings</div>
+        <div class="stat-value">${data.pendingBookings ?? 0}</div>
+      </div>
+    `;
+
+    const lastUpdated = document.getElementById('lastUpdated');
+    if (lastUpdated) lastUpdated.textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+
   } catch (err) {
     console.error('Stats error:', err.message);
   }
@@ -54,9 +65,9 @@ async function loadStats() {
 // ─── Load Bookings ───────────────────────────────────────────────────────────
 async function loadBookings() {
   const tbody = document.getElementById('bookingsTbody');
-
-  // Render skeletons immediately
-  if (skeleton?.renderTableSkeleton && tbody) skeleton.renderTableSkeleton(tbody, 7, 6);
+  if (skeleton?.renderTableSkeleton && tbody) {
+    skeleton.renderTableSkeleton(tbody, 7, 6);
+  }
 
   try {
     const res = await fetch('/api/admin/bookings', { headers: authHeader });
@@ -64,30 +75,38 @@ async function loadBookings() {
     if (!res.ok) throw new Error('Failed to load bookings');
 
     if (bookings.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No bookings yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:2rem;">No bookings yet.</td></tr>';
       return;
     }
 
     tbody.innerHTML = bookings.map((b) => `
       <tr>
         <td>${b.id}</td>
-        <td>${escHtml(b.user_name)}<br/><small style="color:#94a3b8;">${escHtml(b.user_email)}</small></td>
+        <td>
+          <div style="font-weight:600;">${escHtml(b.user_name)}</div>
+          <div style="font-size:0.75rem; color:#64748b;">${escHtml(b.user_email)}</div>
+        </td>
         <td>${escHtml(b.facility)}</td>
-        <td>${b.date}</td>
+        <td>${new Date(b.date).toLocaleDateString()}</td>
         <td>${b.start_time} – ${b.end_time}</td>
         <td><span class="status-badge status-${b.status}">${b.status}</span></td>
         <td>
-          ${b.status !== 'approved'
-            ? `<button class="btn-sm btn-approve" onclick="updateBooking(${b.id}, 'approved')">Approve</button> `
-            : ''}
-          ${b.status !== 'cancelled'
-            ? `<button class="btn-sm btn-cancel" onclick="updateBooking(${b.id}, 'cancelled')">Cancel</button>`
-            : ''}
+          <div style="display:flex; gap:0.4rem;">
+            ${b.status !== 'approved'
+              ? `<button class="btn-sm btn-approve" onclick="updateBooking(${b.id}, 'approved')" title="Approve"><i data-lucide="check" style="width:14px;"></i></button> `
+              : ''}
+            ${b.status !== 'cancelled'
+              ? `<button class="btn-sm btn-cancel" onclick="updateBooking(${b.id}, 'cancelled')" title="Cancel"><i data-lucide="x" style="width:14px;"></i></button>`
+              : ''}
+          </div>
         </td>
       </tr>
     `).join('');
+    
+    if (window.lucide) lucide.createIcons();
+    
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" style="color:#c62828;">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="color:#c62828;text-align:center;padding:2rem;">${err.message}</td></tr>`;
   }
 }
 
@@ -101,8 +120,8 @@ async function updateBooking(bookingId, status) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Update failed');
-    await loadBookings();
-    await loadStats();
+    loadBookings();
+    loadStats();
   } catch (err) {
     alert('Error: ' + err.message);
   }
@@ -111,13 +130,17 @@ async function updateBooking(bookingId, status) {
 // ─── Load Users ──────────────────────────────────────────────────────────────
 async function loadUsers() {
   const tbody = document.getElementById('usersTbody');
+  if (skeleton?.renderTableSkeleton && tbody) {
+    skeleton.renderTableSkeleton(tbody, 5, 5);
+  }
+
   try {
     const res = await fetch('/api/admin/users', { headers: authHeader });
     const users = await res.json();
     if (!res.ok) throw new Error('Failed to load users');
 
     if (users.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">No users found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:2rem;">No users found.</td></tr>';
       return;
     }
 
@@ -131,7 +154,7 @@ async function loadUsers() {
       </tr>
     `).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" style="color:#c62828;">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="color:#c62828;text-align:center;padding:2rem;">${err.message}</td></tr>`;
   }
 }
 
@@ -148,4 +171,5 @@ function escHtml(str) {
 loadStats();
 loadBookings();
 loadUsers();
+
 

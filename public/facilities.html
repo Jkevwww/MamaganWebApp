@@ -1,65 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Facilities – Mamagan</title>
-  <link rel="stylesheet" href="/css/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Facilities - Mamagan</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-  <!-- Navbar -->
+
   <header class="navbar">
-    <span class="brand">Mamagan</span>
+    <div class="brand">
+      <a href="/"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
+    </div>
     <nav>
       <a href="/facilities.html">Facilities</a>
+      <a href="/my-bookings.html" class="auth-only">My Bookings</a>
       <a href="#" id="navUser" style="opacity:.7; cursor:default;"></a>
-      <a href="#" id="navLogout">Logout</a>
+      <button id="navLogout" class="btn btn-secondary" style="padding: 0.4rem 1rem; margin-left: 1rem; display:none;">Logout</button>
+      <a href="/login.html" class="btn btn-primary guest-only" style="padding: 0.4rem 1rem;">Login</a>
     </nav>
   </header>
 
-  <!-- Page Content -->
   <main class="page-content">
-    <h2>Available Facilities</h2>
-    <div class="facility-grid" id="facilityGrid">
-      <p id="loadingMsg" style="color:#777;">Loading facilities...</p>
+    <div class="container">
+      <div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
+        
+        <!-- Sidebar Filters -->
+        <aside class="filters-sidebar" style="width: 250px; background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+          <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="filter" style="width: 18px;"></i> Filters</h3>
+          
+          <div class="filter-group" style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem; color: #64748b;">CATEGORY</label>
+            <select id="filterCategory" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 8px;">
+              <option value="">All Categories</option>
+              <option value="Cottage">Cottages</option>
+              <option value="Room">Rooms / Cabanas</option>
+              <option value="Equipment">Beach Equipment</option>
+            </select>
+          </div>
+          
+          <div class="filter-group" style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem; color: #64748b;">CAPACITY</label>
+            <input type="number" id="filterCapacity" placeholder="Min. guests" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 8px;">
+          </div>
+          
+          <div class="filter-group" style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem; color: #64748b;">PRICE RANGE</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="number" id="filterMinPrice" placeholder="Min" style="width: 50%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 8px;">
+              <input type="number" id="filterMaxPrice" placeholder="Max" style="width: 50%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 8px;">
+            </div>
+          </div>
+          
+          <button id="applyFilters" class="btn btn-primary btn-block">Apply Filters</button>
+          <button id="resetFilters" class="btn btn-secondary btn-block" style="margin-top: 0.5rem;">Reset</button>
+        </aside>
+
+        <!-- Main Content -->
+        <div style="flex: 1; min-width: 300px;">
+          <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="margin: 0;">Our Facilities</h2>
+            <div class="search-box" style="position: relative;">
+               <i data-lucide="search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; color: #777;"></i>
+               <input type="text" id="searchInput" placeholder="Search facilities..." style="padding: 0.6rem 1rem 0.6rem 2.5rem; border: 1px solid #ddd; border-radius: 8px; width: 250px;">
+            </div>
+          </header>
+
+          <div class="facility-grid" id="facilityGrid">
+            <!-- Skeletons will be rendered here by JS -->
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
-  <!-- Booking Modal -->
-  <div class="modal-overlay" id="bookingModal">
-    <div class="modal">
-      <h3>Book Facility: <span id="modalFacilityName"></span></h3>
-      <div class="alert alert-error" id="modalAlert"></div>
-      <form id="bookingForm" novalidate>
-        <input type="hidden" id="bookingFacilityId" />
-        <div class="form-group">
-          <label for="bookDate">Date</label>
-          <input type="date" id="bookDate" required />
-        </div>
-        <div class="form-group">
-          <label for="startTime">Start Time</label>
-          <input type="time" id="startTime" required />
-        </div>
-        <div class="form-group">
-          <label for="endTime">End Time</label>
-          <input type="time" id="endTime" required />
-        </div>
-        <div class="form-group">
-          <label for="bookNotes">Notes (optional)</label>
-          <input type="text" id="bookNotes" placeholder="Any special requirements?" />
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="closeModal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="bookSubmitBtn">Confirm Booking</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <script src="/js/skeleton.js"></script>
   <script src="/js/facilities.js"></script>
-
-
-
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>

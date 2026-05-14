@@ -1,176 +1,139 @@
 /* ─── facilities.js ─────────────────────────────────────────────────────────── */
 
-// Auth guard (cookie-based)
-// NOTE: this file uses cookie-based auth on the backend, but legacy UI expects a JWT token.
-// Existing behavior kept; skeleton loading added below.
-const token = null; // legacy
-let user = {};
-
-// Skeleton helpers (optional)
+let user = null;
 const skeleton = window.Skeleton;
 
-
-async function ensureLoggedIn() {
+async function checkAuth() {
   try {
     const res = await fetch('/api/auth/me');
-    if (!res.ok) {
-      window.location.replace('/login.html');
-      return;
+    if (res.ok) {
+      user = await res.json();
+      const navUserEl = document.getElementById('navUser');
+      if (navUserEl && user?.name) navUserEl.textContent = user.name;
+      
+      document.querySelectorAll('.auth-only').forEach(el => el.style.display = 'inline-block');
+      document.querySelectorAll('.guest-only').forEach(el => el.style.display = 'none');
+      const logoutBtn = document.getElementById('navLogout');
+      if (logoutBtn) logoutBtn.style.display = 'inline-block';
+    } else {
+      document.querySelectorAll('.auth-only').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.guest-only').forEach(el => el.style.display = 'inline-block');
     }
-    user = await res.json();
-    const navUserEl2 = document.getElementById('navUser');
-    if (navUserEl2 && user?.name) navUserEl2.textContent = user.name;
-  } catch (_) {
-    window.location.replace('/login.html');
-  }
-}
-
-ensureLoggedIn();
-
-
-// Navbar user display (cookie-based, set after ensureLoggedIn())
-const navUserEl = document.getElementById('navUser');
-if (navUserEl && user?.name) navUserEl.textContent = user.name;
-
-
-document.getElementById('navLogout').addEventListener('click', async (e) => {
-  e.preventDefault();
-  try {
-    await fetch('/api/auth/logout', { method: 'POST' });
   } catch (_) {
     // ignore
   }
-  localStorage.clear();
-  window.location.replace('/login.html');
-});
+}
 
+checkAuth();
 
-// ─── Load facilities ────────────────────────────────────────────────────────
+if (document.getElementById('navLogout')) {
+  document.getElementById('navLogout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (_) {}
+    localStorage.clear();
+    window.location.replace('/');
+  });
+}
+
+// ─── Load facilities with Filters ───────────────────────────────────────────
 
 async function loadFacilities() {
   const grid = document.getElementById('facilityGrid');
-
-  // Skeleton while loading
-  if (grid) {
-    // Default placeholder matching typical facility count
-    if (skeleton?.renderFacilityGridSkeleton) skeleton.renderFacilityGridSkeleton(grid, 6);
+  if (grid && skeleton?.renderFacilityGridSkeleton) {
+    skeleton.renderFacilityGridSkeleton(grid, 6);
   }
 
-  try {
-    const res = await fetch('/api/facilities');
-    const facilities = await res.json();
+  const category = document.getElementById('filterCategory').value;
+  const capacity = document.getElementById('filterCapacity').value;
+  const minPrice = document.getElementById('filterMinPrice').value;
+  const maxPrice = document.getElementById('filterMaxPrice').value;
+  const search = document.getElementById('searchInput').value.toLowerCase();
 
+  let url = '/api/facilities?';
+  if (category) url += `category=${category}&`;
+  if (capacity) url += `capacity=${capacity}&`;
+  if (minPrice) url += `min_price=${minPrice}&`;
+  if (maxPrice) url += `max_price=${maxPrice}&`;
+
+  try {
+    const res = await fetch(url);
+    let facilities = await res.json();
 
     if (!res.ok) throw new Error('Failed to load facilities');
 
+    // Client-side search filter
+    if (search) {
+      facilities = facilities.filter(f => 
+        f.name.toLowerCase().includes(search) || 
+        f.description.toLowerCase().includes(search)
+      );
+    }
+
     if (facilities.length === 0) {
-      grid.innerHTML = '<p style="color:#777;">No facilities available at the moment.</p>';
+      grid.innerHTML = '<div class="text-center" style="grid-column: 1/-1; padding: 3rem;"><p style="color:#777;">No facilities match your criteria.</p></div>';
       return;
     }
 
     grid.innerHTML = facilities.map((f) => `
-      <div class="facility-card">
-        <img src="${f.image_url || 'https://placehold.co/400x200?text=Facility'}" alt="${f.name}" loading="lazy" />
+      <div class="facility-card ${!f.is_bookable ? 'is-loading' : ''}">
+        <img src="${f.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'}" alt="${f.name}" loading="lazy" />
         <div class="card-body">
-          <h3>${escHtml(f.name)}</h3>
-          <p class="meta">Capacity: ${f.capacity} pax</p>
-          <p class="price">₱${Number(f.price_per_hour).toLocaleString()} / hour</p>
-          <p>${escHtml(f.description || '')}</p>
-          <span class="badge ${f.is_available ? 'badge-available' : 'badge-unavailable'}">
-            ${f.is_available ? 'Available' : 'Unavailable'}
-          </span>
-          ${f.is_available
-            ? `<button class="btn btn-primary" style="margin-top:.8rem;width:100%;"
-                 onclick="openBookingModal(${f.id}, '${escHtml(f.name)}')">
-                 Book Now
-               </button>`
-            : ''}
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <h3 style="margin:0;">${escHtml(f.name)}</h3>
+            <span class="badge" style="background: #f1f5f9; color: #64748b;">${f.size}</span>
+          </div>
+          <p class="meta" style="margin-top:0.5rem; height: 3rem; overflow: hidden; text-overflow: ellipsis;">${escHtml(f.description || 'Experience the beauty of Mamagan.')}</p>
+          <p class="price" style="margin-bottom:0.5rem;">
+            ₱${Number(f.price_min).toLocaleString()}${f.price_max > f.price_min ? ' - ₱' + Number(f.price_max).toLocaleString() : ''}
+            <small style="color:#777; font-weight:normal;"> / ${f.rental_type === 'FIXED' ? 'session' : f.rental_type === 'DAILY' ? 'day' : 'hour'}</small>
+          </p>
+          <div style="margin-bottom: 1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+             <span class="badge ${f.is_available && f.is_bookable ? 'badge-available' : 'badge-unavailable'}">
+              ${f.is_available && f.is_bookable ? 'Available' : 'Unavailable'}
+            </span>
+            <span class="badge" style="background:#fff7ed; color:#9a3412;"><i data-lucide="users" style="width:12px; height:12px; vertical-align:middle;"></i> ${f.capacity_min}-${f.capacity_max} pax</span>
+            <span class="badge" style="background:#f0f9ff; color:#0369a1;"><i data-lucide="package" style="width:12px; height:12px; vertical-align:middle;"></i> ${f.units} units</span>
+          </div>
+          
+          ${!f.is_bookable ? `<p style="color:var(--error); font-size:0.8rem; margin-bottom:1rem;">${f.unavailable_reason || 'Not bookable'}</p>` : ''}
+
+          <a href="/booking.html?id=${f.id}" class="btn ${f.is_bookable ? 'btn-primary' : 'btn-secondary'} btn-block" ${!f.is_bookable ? 'style="pointer-events:none; opacity:0.5;"' : ''}>
+            ${f.is_bookable ? 'Book Now' : 'Currently Unavailable'}
+          </a>
         </div>
       </div>
     `).join('');
+    
+    if (window.lucide) lucide.createIcons();
+
   } catch (err) {
-    grid.innerHTML = `<p style="color:#c62828;">Error: ${err.message}</p>`;
+    grid.innerHTML = `<div class="text-center" style="grid-column: 1/-1; padding: 3rem;"><p style="color:#c62828;">Error: ${err.message}</p></div>`;
   }
 }
 
-// ─── Booking Modal ──────────────────────────────────────────────────────────
-const modal = document.getElementById('bookingModal');
-const modalFacilityName = document.getElementById('modalFacilityName');
-const modalAlert = document.getElementById('modalAlert');
-const bookDateInput = document.getElementById('bookDate');
+// ─── Event Listeners ────────────────────────────────────────────────────────
 
-// Set minimum date to today
-bookDateInput.min = new Date().toISOString().split('T')[0];
-
-function openBookingModal(facilityId, facilityName) {
-  if (!token) { window.location.replace('/login.html'); return; }
-  document.getElementById('bookingFacilityId').value = facilityId;
-  modalFacilityName.textContent = facilityName;
-  modalAlert.className = 'alert';
-  document.getElementById('bookingForm').reset();
-  bookDateInput.min = new Date().toISOString().split('T')[0];
-  modal.classList.add('open');
-}
-
-document.getElementById('closeModal').addEventListener('click', () => {
-  modal.classList.remove('open');
+document.getElementById('applyFilters').addEventListener('click', loadFacilities);
+document.getElementById('resetFilters').addEventListener('click', () => {
+  document.getElementById('filterCategory').value = '';
+  document.getElementById('filterCapacity').value = '';
+  document.getElementById('filterMinPrice').value = '';
+  document.getElementById('filterMaxPrice').value = '';
+  document.getElementById('searchInput').value = '';
+  loadFacilities();
 });
 
-modal.addEventListener('click', (e) => {
-  if (e.target === modal) modal.classList.remove('open');
-});
-
-document.getElementById('bookingForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  modalAlert.className = 'alert';
-
-  const facilityId = document.getElementById('bookingFacilityId').value;
-  const date = document.getElementById('bookDate').value;
-  const start_time = document.getElementById('startTime').value;
-  const end_time = document.getElementById('endTime').value;
-  const notes = document.getElementById('bookNotes').value.trim();
-
-  if (!date || !start_time || !end_time) {
-    modalAlert.textContent = 'Please fill in date, start time, and end time.';
-    modalAlert.className = 'alert alert-error show';
-    return;
-  }
-  if (start_time >= end_time) {
-    modalAlert.textContent = 'End time must be after start time.';
-    modalAlert.className = 'alert alert-error show';
-    return;
-  }
-
-  const submitBtn = document.getElementById('bookSubmitBtn');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Booking...';
-
-  try {
-    const res = await fetch(`/api/facilities/${facilityId}/book`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ date, start_time, end_time, notes }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Booking failed');
-
-    modalAlert.textContent = 'Booking submitted! Status: ' + data.status;
-    modalAlert.className = 'alert alert-success show';
-    setTimeout(() => modal.classList.remove('open'), 2000);
-  } catch (err) {
-    modalAlert.textContent = err.message;
-    modalAlert.className = 'alert alert-error show';
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Confirm Booking';
-  }
+let searchTimeout;
+document.getElementById('searchInput').addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(loadFacilities, 300);
 });
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function escHtml(str) {
+  if (!str) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

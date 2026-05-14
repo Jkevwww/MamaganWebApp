@@ -1,36 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Login – Mamagan</title>
-  <link rel="stylesheet" href="/css/style.css" />
-  <link rel="stylesheet" href="/css/admin.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - Mamagan</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
+<body style="background: #0f172a;">
   <div class="admin-login-wrapper">
     <div class="admin-login-card">
-      <h1>Admin Panel</h1>
-      <p class="subtitle">Sign in with your admin credentials</p>
+      <div class="text-center" style="margin-bottom: 2rem;">
+        <img src="/admin-logo.svg" alt="Mamagan Admin" height="40">
+      </div>
+      
+      <h1>Admin Portal</h1>
+      <p class="subtitle">Secure access for staff and administrators</p>
 
       <div class="alert alert-error" id="alertBox"></div>
 
       <form id="adminLoginForm" novalidate>
         <div class="form-group">
-          <label for="email">Email</label>
+          <label for="email"><i data-lucide="shield" style="width:14px; margin-right:5px;"></i> Admin Email</label>
           <input type="email" id="email" placeholder="admin@mamagan.com" required />
         </div>
         <div class="form-group">
-          <label for="password">Password</label>
+          <label for="password"><i data-lucide="key" style="width:14px; margin-right:5px;"></i> Password</label>
           <input type="password" id="password" placeholder="••••••••" required />
         </div>
-        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Sign In</button>
+        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Authenticate</button>
       </form>
+      
+      <div class="text-center" style="margin-top: 1.5rem;">
+        <a href="/" style="font-size: 0.85rem; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+          <i data-lucide="arrow-left" style="width: 14px;"></i> Back to Main Site
+        </a>
+      </div>
     </div>
   </div>
 
   <script src="/js/auth.js"></script>
   <script>
+    lucide.createIcons();
     initAdminLoginForm('adminLoginForm', 'alertBox', 'submitBtn');
   </script>
 </body>

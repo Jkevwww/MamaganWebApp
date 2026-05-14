@@ -1,14 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mamagan Web App</title>
-  <script>
-    // Redirect to facilities if logged in, otherwise to login
-    const token = localStorage.getItem('token');
-    window.location.replace(token ? '/facilities.html' : '/login.html');
-  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mamagan Fun & Adventure Beach Resort</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
-<body></body>
+<body class="landing-page">
+
+  <header class="navbar">
+    <div class="brand">
+      <img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40">
+    </div>
+    <nav id="nav-links">
+      <a href="/facilities.html">Facilities</a>
+      <a href="/login.html" class="auth-only-guest">Login</a>
+      <a href="/register.html" class="btn btn-primary auth-only-guest" style="padding: 0.4rem 1rem;">Register</a>
+      <a href="/facilities.html" class="auth-only-user">My Bookings</a>
+      <button id="logout-btn" class="btn btn-secondary auth-only-user" style="padding: 0.4rem 1rem; margin-left: 1rem; display:none;">Logout</button>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Experience Paradise at Mamagan</h1>
+      <p>Sun, waves, and unforgettable adventures await you at the heart of the beach.</p>
+      <div class="hero-btns">
+        <a href="/facilities.html" class="btn btn-primary btn-large">Book Now</a>
+        <a href="#facilities-preview" class="btn btn-secondary btn-large">View Facilities</a>
+      </div>
+    </div>
+    <div class="hero-animation">
+      <lottie-player src="https://assets10.lottiefiles.com/packages/lf20_pk5puaft.json" background="transparent" speed="1" style="width: 100%; height: 300px;" loop autoplay></lottie-player>
+    </div>
+  </section>
+
+  <section id="facilities-preview" class="section">
+    <div class="container">
+      <h2 class="text-center">Our Facilities</h2>
+      <div class="facility-grid" id="landing-facility-grid">
+        <!-- Skeleton loading here or static preview -->
+        <div class="facility-card">
+          <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80" alt="Cottages">
+          <div class="card-body">
+            <h3>Cottages</h3>
+            <p class="meta">Perfect for day trips and family gatherings.</p>
+            <p class="price">Starting at ₱500</p>
+            <a href="/facilities.html?category=Cottage" class="btn btn-primary btn-block">Explore Cottages</a>
+          </div>
+        </div>
+        <div class="facility-card">
+          <img src="https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=400&q=80" alt="Cabanas">
+          <div class="card-body">
+            <h3>Rooms & Cabanas</h3>
+            <p class="meta">Comfortable stays for overnight adventures.</p>
+            <p class="price">Starting at ₱1,200</p>
+            <a href="/facilities.html?category=Room" class="btn btn-primary btn-block">Book a Room</a>
+          </div>
+        </div>
+        <div class="facility-card">
+          <img src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=400&q=80" alt="Equipment">
+          <div class="card-body">
+            <h3>Beach Equipment</h3>
+            <p class="meta">Kayaks, surfboards, and more.</p>
+            <p class="price">₱100 / hour</p>
+            <a href="/facilities.html?category=Equipment" class="btn btn-primary btn-block">Rent Now</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bg-light">
+    <div class="container">
+      <h2 class="text-center">How Booking Works</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-icon"><i data-lucide="search"></i></div>
+          <h4>1. Choose Facility</h4>
+          <p>Browse our wide range of cottages, rooms, and equipment.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon"><i data-lucide="calendar"></i></div>
+          <h4>2. Select Date</h4>
+          <p>Pick your preferred date and time slot for your visit.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon"><i data-lucide="credit-card"></i></div>
+          <h4>3. Easy Payment</h4>
+          <p>Securely pay via GCash or PayMongo to confirm booking.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon"><i data-lucide="qr-code"></i></div>
+          <h4>4. Get QR Ticket</h4>
+          <p>Receive your digital ticket and show it upon arrival.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-info">
+          <img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40">
+          <p>Your ultimate beach destination for fun and adventure.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="/facilities.html">All Facilities</a></li>
+            <li><a href="/login.html">Login</a></li>
+            <li><a href="/register.html">Register</a></li>
+          </ul>
+        </div>
+        <div class="footer-contact">
+          <h4>Contact Us</h4>
+          <p><i data-lucide="map-pin"></i> Beachfront Rd, Paradise Cove</p>
+          <p><i data-lucide="phone"></i> +63 912 345 6789</p>
+          <p><i data-lucide="mail"></i> hello@mamagan.com</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Mamagan Beach Resort. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Simple auth check for landing page
+    const token = localStorage.getItem('token');
+    if (token) {
+      document.querySelectorAll('.auth-only-guest').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.auth-only-user').forEach(el => el.style.display = 'inline-block');
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.style.display = 'inline-block';
+        logoutBtn.addEventListener('click', () => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.reload();
+        });
+      }
+    } else {
+      document.querySelectorAll('.auth-only-guest').forEach(el => el.style.display = 'inline-block');
+      document.querySelectorAll('.auth-only-user').forEach(el => el.style.display = 'none');
+    }
+  </script>
+</body>
 </html>

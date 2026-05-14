@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Facility Details - Mamagan</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="brand">
+      <a href="/"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
+    </div>
+    <nav>
+      <a href="/facilities.html">Facilities</a>
+      <a href="/my-bookings.html" class="auth-only">My Bookings</a>
+      <a href="#" id="navUser" style="opacity:.7; cursor:default;"></a>
+      <button id="navLogout" class="btn btn-secondary" style="padding: 0.4rem 1rem; margin-left: 1rem; display:none;">Logout</button>
+      <a href="/login.html" class="btn btn-primary guest-only" style="padding: 0.4rem 1rem;">Login</a>
+    </nav>
+  </header>
+
+  <main class="page-content">
+    <div class="container" style="max-width: 1000px;">
+      <a href="/facilities.html" style="display: flex; align-items: center; gap: 0.5rem; color: #64748b; margin-bottom: 2rem; font-size: 0.9rem;">
+        <i data-lucide="arrow-left" style="width: 16px;"></i> Back to Facilities
+      </a>
+
+      <div id="facilityDetails" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: flex-start;">
+         <!-- Content loaded by JS -->
+         <div class="skeleton" style="height: 400px; width: 100%; border-radius: 12px;"></div>
+         <div>
+           <div class="skeleton" style="height: 40px; width: 80%; margin-bottom: 1rem;"></div>
+           <div class="skeleton" style="height: 100px; width: 100%;"></div>
+         </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const facilityId = new URLSearchParams(window.location.search).get('id');
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const user = await res.json();
+          document.getElementById('navUser').textContent = user.name;
+          document.querySelectorAll('.auth-only').forEach(el => el.style.display = 'inline-block');
+          document.querySelectorAll('.guest-only').forEach(el => el.style.display = 'none');
+          document.getElementById('navLogout').style.display = 'inline-block';
+        }
+      } catch (_) {}
+    }
+
+    async function loadFacility() {
+      if (!facilityId) { window.location.replace('/facilities.html'); return; }
+
+      try {
+        const res = await fetch(`/api/facilities/${facilityId}`);
+        if (!res.ok) throw new Error('Facility not found');
+        const f = await res.json();
+        
+        renderFacility(f);
+      } catch (err) {
+        document.getElementById('facilityDetails').innerHTML = `<p style="color:var(--error);">${err.message}</p>`;
+      }
+    }
+
+    function renderFacility(f) {
+      const container = document.getElementById('facilityDetails');
+      container.innerHTML = `
+        <div class="facility-image">
+          <img src="${f.image_url || 'https://placehold.co/600x400'}" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.1);">
+        </div>
+        <div class="facility-info">
+          <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem; color: var(--primary);">${f.name}</h1>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <span class="badge" style="background:#f1f5f9; color:#64748b;">${f.size}</span>
+            <span class="badge" style="background:#fff7ed; color:#9a3412;">${f.capacity_min}-${f.capacity_max} pax</span>
+            <span class="badge" style="background:#f0f9ff; color:#0369a1;">${f.category}</span>
+          </div>
+          
+          <p style="font-size: 1.1rem; line-height: 1.6; color: #475569; margin-bottom: 2rem;">${f.description}</p>
+          
+          <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <div style="font-size: 0.9rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">Pricing</div>
+            <div style="font-size: 1.8rem; font-weight: 700; color: var(--primary);">
+              ₱${Number(f.price_min).toLocaleString()} ${f.price_max > f.price_min ? '- ₱' + Number(f.price_max).toLocaleString() : ''}
+              <small style="font-size: 1rem; color: #64748b; font-weight: 400;"> / ${f.rental_type === 'DAILY' ? 'day' : f.rental_type === 'HOURLY' ? 'hour' : 'session'}</small>
+            </div>
+            ${f.category === 'Room' ? '<p style="font-size: 0.85rem; color: #64748b; margin-top: 0.5rem;">* Night surcharge applies for overnight stays.</p>' : ''}
+          </div>
+
+          ${f.is_bookable ? `
+            <a href="/booking.html?id=${f.id}" class="btn btn-primary btn-block btn-large">Book this Facility</a>
+          ` : `
+            <div style="padding: 1.5rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; color: #991b1b; text-align: center;">
+              <i data-lucide="info" style="margin-bottom: 0.5rem;"></i>
+              <p><strong>Currently Unavailable</strong></p>
+              <p style="font-size: 0.9rem; opacity: 0.8;">${f.unavailable_reason || 'This facility is not open for reservations at the moment.'}</p>
+            </div>
+          `}
+          
+          <div style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2rem;">
+            <h4 style="margin-bottom: 1rem;">Facility Rules</h4>
+            <ul style="list-style: none; color: #64748b; font-size: 0.9rem; line-height: 1.8;">
+              <li><i data-lucide="check-circle" style="width:14px; color:var(--primary); margin-right:8px;"></i> Maximum capacity of ${f.capacity_max} people must be strictly followed.</li>
+              <li><i data-lucide="check-circle" style="width:14px; color:var(--primary); margin-right:8px;"></i> No loud music after 10:00 PM.</li>
+              <li><i data-lucide="check-circle" style="width:14px; color:var(--primary); margin-right:8px;"></i> Please keep the area clean.</li>
+            </ul>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    checkAuth();
+    loadFacility();
+  </script>
+</body>
+</html>

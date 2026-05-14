@@ -1,14 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Register – Mamagan</title>
-  <link rel="stylesheet" href="/css/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Mamagan</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
-  <div class="auth-wrapper">
+<body style="background: linear-gradient(135deg, var(--primary) 0%, var(--navy) 100%);">
+  <div class="auth-wrapper" style="min-height: 100vh;">
     <div class="auth-card">
+      <div class="text-center" style="margin-bottom: 2rem;">
+        <a href="/"><img src="/mamagan-logo.svg" alt="Mamagan Logo" height="50"></a>
+      </div>
+
       <h1>Create Account</h1>
       <p class="subtitle">Join Mamagan and book facilities easily</p>
 
@@ -16,33 +22,34 @@
 
       <form id="registerForm" novalidate>
         <div class="form-group">
-          <label for="name">Full Name</label>
+          <label for="name"><i data-lucide="user" style="width:14px; margin-right:5px;"></i> Full Name</label>
           <input type="text" id="name" placeholder="Juan dela Cruz" required />
         </div>
         <div class="form-group">
-          <label for="email">Email</label>
+          <label for="email"><i data-lucide="mail" style="width:14px; margin-right:5px;"></i> Email Address</label>
           <input type="email" id="email" placeholder="you@example.com" required />
         </div>
         <div class="form-group">
-          <label for="phone">Phone</label>
+          <label for="phone"><i data-lucide="phone" style="width:14px; margin-right:5px;"></i> Phone Number</label>
           <input type="tel" id="phone" placeholder="09xx-xxx-xxxx" required />
         </div>
         <div class="form-group">
-          <label for="password">Password</label>
+          <label for="password"><i data-lucide="lock" style="width:14px; margin-right:5px;"></i> Password</label>
           <input type="password" id="password" placeholder="Min. 8 characters" required />
         </div>
 
         <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Create Account</button>
       </form>
 
-      <p style="text-align:center; margin-top:1.2rem; font-size:.9rem; color:#777;">
-        Already have an account? <a href="/login.html" style="color:#1a73e8;">Sign In</a>
+      <p style="text-align:center; margin-top:1.5rem; font-size:.9rem; color:#777;">
+        Already have an account? <a href="/login.html" style="color:var(--primary); font-weight: 600;">Sign In</a>
       </p>
     </div>
   </div>
 
   <script src="/js/auth.js"></script>
   <script>
+    lucide.createIcons();
     initRegisterForm('registerForm', 'alertBox', 'submitBtn');
   </script>
 </body>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Bookings - Mamagan</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="brand">
+      <a href="/"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
+    </div>
+    <nav>
+      <a href="/facilities.html">Facilities</a>
+      <a href="/my-bookings.html">My Bookings</a>
+      <a href="#" id="navUser" style="opacity:.7; cursor:default;"></a>
+      <button id="navLogout" class="btn btn-secondary" style="padding: 0.4rem 1rem; margin-left: 1rem;">Logout</button>
+    </nav>
+  </header>
+
+  <main class="page-content">
+    <div class="container">
+      <header style="margin-bottom: 2rem;">
+        <h2>My Bookings</h2>
+        <p style="color: #777;">View and manage your beach resort reservations.</p>
+      </header>
+
+      <div class="table-card" style="background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+        <table id="myBookingsTable">
+          <thead>
+            <tr>
+              <th>Facility</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="myBookingsTbody">
+            <!-- Skeletons will be rendered here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/skeleton.js"></script>
+  <script src="/js/bookings.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

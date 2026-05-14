@@ -1,59 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard – Mamagan Admin</title>
-  <link rel="stylesheet" href="/css/style.css" />
-  <link rel="stylesheet" href="/css/admin.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Mamagan Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="admin-body">
-  <!-- Admin Navbar -->
+
   <header class="admin-navbar">
-    <span class="brand">Mamagan <span>Admin</span></span>
-    <div style="display:flex; align-items:center;">
-      <span class="nav-user" id="navUser"></span>
-      <button class="btn-logout" id="logoutBtn">Logout</button>
+    <div class="brand">
+      <img src="/admin-logo.svg" alt="Mamagan Admin" height="30">
+    </div>
+    <div style="display:flex; align-items:center; gap: 1.5rem;">
+      <div style="display: flex; align-items:center; gap: 0.5rem; color: #94a3b8; font-size: 0.9rem;">
+        <i data-lucide="user-circle" style="width: 20px;"></i>
+        <span id="navUser">Admin</span>
+      </div>
+      <button class="btn-logout" id="logoutBtn" style="display: flex; align-items:center; gap: 0.4rem;">
+        <i data-lucide="log-out" style="width: 16px;"></i> Logout
+      </button>
     </div>
   </header>
 
   <div class="admin-layout">
-    <!-- Sidebar -->
     <aside class="sidebar">
-      <a href="#section-stats" class="active"><span class="icon">&#128202;</span> Dashboard</a>
-      <a href="#section-bookings"><span class="icon">&#128197;</span> Bookings</a>
-      <a href="#section-users"><span class="icon">&#128100;</span> Users</a>
+      <nav>
+        <a href="#section-stats" class="active"><i data-lucide="layout-dashboard" style="width: 18px;"></i> Dashboard</a>
+        <a href="#section-bookings"><i data-lucide="calendar" style="width: 18px;"></i> Bookings</a>
+        <a href="#section-facilities"><i data-lucide="palmtree" style="width: 18px;"></i> Facilities</a>
+        <a href="#section-users"><i data-lucide="users" style="width: 18px;"></i> Users</a>
+        <a href="#section-reports"><i data-lucide="bar-chart-3" style="width: 18px;"></i> Reports</a>
+        <div style="margin-top: 2rem; padding: 0 1.5rem;">
+           <small style="color: #475569; text-transform: uppercase; font-weight: 700; font-size: 0.7rem; letter-spacing: 1px;">Settings</small>
+        </div>
+        <a href="#section-settings"><i data-lucide="settings" style="width: 18px;"></i> System Settings</a>
+      </nav>
     </aside>
 
-    <!-- Main Content -->
     <main class="admin-main">
-      <!-- Stats Section -->
       <section id="section-stats">
-        <h2>Dashboard Overview</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+           <h2 style="margin: 0;">Dashboard Overview</h2>
+           <div id="lastUpdated" style="font-size: 0.8rem; color: #64748b;"></div>
+        </div>
+        
         <div class="stat-grid" id="statGrid">
-          <div class="stat-card">
-            <div class="stat-label">Total Users</div>
-            <div class="stat-value" id="statUsers">–</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Total Facilities</div>
-            <div class="stat-value" id="statFacilities">–</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Total Bookings</div>
-            <div class="stat-value" id="statBookings">–</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Pending Bookings</div>
-            <div class="stat-value" id="statPending">–</div>
-          </div>
+          <!-- Skeletons here -->
         </div>
       </section>
 
-      <!-- Bookings Section -->
       <section id="section-bookings">
         <div class="table-card">
-          <h3>All Bookings</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0;">Recent Bookings</h3>
+            <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
+              <i data-lucide="download" style="width: 14px;"></i> Export CSV
+            </button>
+          </div>
           <table id="bookingsTable">
             <thead>
               <tr>
@@ -67,16 +74,15 @@
               </tr>
             </thead>
             <tbody id="bookingsTbody">
-              <tr><td colspan="7" style="text-align:center;color:#94a3b8;">Loading...</td></tr>
+              <!-- Skeletons here -->
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- Users Section -->
       <section id="section-users">
         <div class="table-card">
-          <h3>Registered Users</h3>
+          <h3 style="margin-bottom: 1.5rem;">Registered Users</h3>
           <table id="usersTable">
             <thead>
               <tr>
@@ -88,7 +94,7 @@
               </tr>
             </thead>
             <tbody id="usersTbody">
-              <tr><td colspan="5" style="text-align:center;color:#94a3b8;">Loading...</td></tr>
+              <!-- Skeletons here -->
             </tbody>
           </table>
         </div>
@@ -98,6 +104,8 @@
 
   <script src="/js/skeleton.js"></script>
   <script src="/admin/js/dashboard.js"></script>
-
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>
