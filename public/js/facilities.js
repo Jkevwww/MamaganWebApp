@@ -1,8 +1,14 @@
 /* ─── facilities.js ─────────────────────────────────────────────────────────── */
 
 // Auth guard (cookie-based)
+// NOTE: this file uses cookie-based auth on the backend, but legacy UI expects a JWT token.
+// Existing behavior kept; skeleton loading added below.
 const token = null; // legacy
 let user = {};
+
+// Skeleton helpers (optional)
+const skeleton = window.Skeleton;
+
 
 async function ensureLoggedIn() {
   try {
@@ -40,11 +46,20 @@ document.getElementById('navLogout').addEventListener('click', async (e) => {
 
 
 // ─── Load facilities ────────────────────────────────────────────────────────
+
 async function loadFacilities() {
   const grid = document.getElementById('facilityGrid');
+
+  // Skeleton while loading
+  if (grid) {
+    // Default placeholder matching typical facility count
+    if (skeleton?.renderFacilityGridSkeleton) skeleton.renderFacilityGridSkeleton(grid, 6);
+  }
+
   try {
     const res = await fetch('/api/facilities');
     const facilities = await res.json();
+
 
     if (!res.ok) throw new Error('Failed to load facilities');
 

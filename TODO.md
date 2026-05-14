@@ -1,10 +1,15 @@
-# TODO (Project maintenance)
+# TODO.md — Progress Tracker
 
-- [x] Part 7: Update Render compatibility configuration
-- [x] Part 7: Update README documentation (Render, MySQL SSL CA, migrations, seeding, OAuth)
-- [x] Part 7: Ensure .gitignore ignores .env and includes required patterns
-- [x] Part 7: Create/Update .env.example with placeholders only
-- [x] Part 7: Update PlantUML use-case diagram
-- [x] Part 7: Add final testing checklist
+## TASK PART 8 (Branding, Landing, Icons, Animated Icons, Skeleton Loading)
 
+- [x] Repo understanding (read current pages/CSS/JS)
+- [x] Create skeleton utility (`public/js/skeleton.js`)
+- [ ] Add skeleton CSS to `public/css/style.css`
+- [ ] Rewrite `public/index.html` into full landing page
+- [ ] Add Lucide icon CDN integration where icons are present in markup
+- [ ] Add safe animated icons helper (Lottie optional)
+- [ ] Apply skeleton placeholders to `public/facilities.html` + lifecycle in `public/js/facilities.js`
+- [ ] Apply skeleton placeholders to `public/admin/dashboard.html` + lifecycle in `public/admin/js/dashboard.js`
+- [ ] UI polish pass (spacing, PESO formatting hooks if needed)
+- [ ] Quick manual test checklist
 

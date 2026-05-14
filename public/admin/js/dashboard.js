@@ -1,7 +1,16 @@
 /* ─── Admin Dashboard JS ────────────────────────────────────────────────────── */
 
+// Skeleton helpers (optional)
+const skeleton = window.Skeleton;
+
 // Auth guard – admin only
 const token = localStorage.getItem('token');
+
+if (!window.Skeleton) {
+  // Skeleton script might be missing; avoid runtime errors.
+}
+
+
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 if (!token || user.role !== 'admin') {
   window.location.replace('/admin/login.html');
@@ -21,6 +30,10 @@ const authHeader = { Authorization: `Bearer ${token}` };
 
 // ─── Load Stats ─────────────────────────────────────────────────────────────
 async function loadStats() {
+  // Render skeletons immediately
+  const statGrid = document.getElementById('statGrid');
+  if (skeleton?.renderStatSkeleton && statGrid) skeleton.renderStatSkeleton(statGrid, 4);
+
   try {
     const res = await fetch('/api/admin/stats', { headers: authHeader });
     if (res.status === 401 || res.status === 403) {
@@ -41,6 +54,10 @@ async function loadStats() {
 // ─── Load Bookings ───────────────────────────────────────────────────────────
 async function loadBookings() {
   const tbody = document.getElementById('bookingsTbody');
+
+  // Render skeletons immediately
+  if (skeleton?.renderTableSkeleton && tbody) skeleton.renderTableSkeleton(tbody, 7, 6);
+
   try {
     const res = await fetch('/api/admin/bookings', { headers: authHeader });
     const bookings = await res.json();
@@ -131,3 +148,4 @@ function escHtml(str) {
 loadStats();
 loadBookings();
 loadUsers();
+
