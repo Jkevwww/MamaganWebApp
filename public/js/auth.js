@@ -24,11 +24,23 @@ function initLoginForm(formId, alertId, btnId) {
   const btn = document.getElementById(btnId);
   if (btn) btn.dataset.originalText = btn.textContent;
 
-  // Redirect if already logged in
-  if (localStorage.getItem('token')) {
-    window.location.replace('/facilities.html');
-    return;
-  }
+  // Redirect if already logged in (cookie-based)
+  (async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        const role = data?.role;
+        if (role === 'GUEST') window.location.replace('/facilities.html');
+        else window.location.replace('/admin/dashboard.html');
+        return;
+      }
+    } catch (_) {
+      // ignore
+    }
+  })();
+
+
 
   document.getElementById(formId).addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -51,9 +63,10 @@ function initLoginForm(formId, alertId, btnId) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Login failed');
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      window.location.replace('/facilities.html');
+      const role = data?.user?.role;
+      if (role === 'GUEST') window.location.replace('/facilities.html');
+      else window.location.replace('/admin/dashboard.html');
+
     } catch (err) {
       showAlert(alertId, err.message);
     } finally {
@@ -67,22 +80,39 @@ function initRegisterForm(formId, alertId, btnId) {
   const btn = document.getElementById(btnId);
   if (btn) btn.dataset.originalText = btn.textContent;
 
-  if (localStorage.getItem('token')) {
-    window.location.replace('/facilities.html');
-    return;
-  }
+  // If already logged in, attempt to redirect based on /me.
+  (async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        const role = data?.role;
+        if (role === 'GUEST') window.location.replace('/facilities.html');
+        else window.location.replace('/admin/dashboard.html');
+        return;
+      }
+    } catch (_) {
+      // ignore
+    }
+  })();
+
+
+
+
 
   document.getElementById(formId).addEventListener('submit', async (e) => {
     e.preventDefault();
     hideAlert(alertId);
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
+    const phone = document.getElementById('phone').value.trim();
     const password = document.getElementById('password').value;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !phone || !password) {
       showAlert(alertId, 'Please fill in all fields.');
       return;
     }
+
     if (password.length < 8) {
       showAlert(alertId, 'Password must be at least 8 characters.');
       return;
@@ -93,14 +123,16 @@ function initRegisterForm(formId, alertId, btnId) {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, phone, password }),
+
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      window.location.replace('/facilities.html');
+      const role = data?.user?.role;
+      if (role === 'GUEST') window.location.replace('/facilities.html');
+      else window.location.replace('/admin/dashboard.html');
+
     } catch (err) {
       showAlert(alertId, err.message);
     } finally {
@@ -115,11 +147,19 @@ function initAdminLoginForm(formId, alertId, btnId) {
   if (btn) btn.dataset.originalText = btn.textContent;
 
   // If already logged in as admin, redirect to dashboard
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (localStorage.getItem('token') && user.role === 'admin') {
-    window.location.replace('/admin/dashboard.html');
-    return;
+  // If already logged in, redirect based on /me.
+  try {
+    const res = await fetch('/api/auth/me');
+    if (res.ok) {
+      const data = await res.json();
+      const role = data?.role;
+      if (role && role !== 'GUEST') window.location.replace('/admin/dashboard.html');
+      return;
+    }
+  } catch (_) {
+    // ignore
   }
+
 
   document.getElementById(formId).addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -143,9 +183,12 @@ function initAdminLoginForm(formId, alertId, btnId) {
       if (!res.ok) throw new Error(data.message || 'Login failed');
       if (data.user.role !== 'admin') throw new Error('Access denied: not an admin account');
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      const role = data?.user?.role;
+      if (role !== 'ADMIN' && role !== 'admin') {
+        throw new Error('Access denied: not an admin account');
+      }
       window.location.replace('/admin/dashboard.html');
+
     } catch (err) {
       showAlert(alertId, err.message);
     } finally {
@@ -155,11 +198,17 @@ function initAdminLoginForm(formId, alertId, btnId) {
 }
 
 /* ─── Logout helper ─────────────────────────────────────────────────────────── */
-function logout(redirectTo = '/login.html') {
+async function logout(redirectTo = '/login.html') {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch (_) {
+    // ignore
+  }
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   window.location.replace(redirectTo);
 }
+
 
 /* ─── Auth guard helper (call at top of protected pages) ────────────────────── */
 function requireAuth(redirectTo = '/login.html') {

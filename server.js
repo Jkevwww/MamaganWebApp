@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 
 const { testConnection } = require('./src/config/db');
 const { errorHandler } = require('./src/middleware/error');
@@ -14,17 +18,35 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
-app.use(cors());
+app.use(helmet());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || true,
+  credentials: true,
+}));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests. Please try again later.' },
+});
+
 
 // ─── Static Files ────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── API Routes ──────────────────────────────────────────────────────────────
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
+
+// In production, frontend may rely on secure cookies; CORS should allow credentials.
+// (If CORS is configured differently elsewhere, adjust there.)
 app.use('/api/facilities', facilityRoutes);
 app.use('/api/admin', adminRoutes);
+
 
 // ─── SPA Fallback: serve HTML for known frontend routes ──────────────────────
 const frontendRoutes = ['/login', '/register', '/facilities'];

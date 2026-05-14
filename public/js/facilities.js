@@ -1,19 +1,43 @@
 /* ─── facilities.js ─────────────────────────────────────────────────────────── */
 
-// Auth guard
-const token = localStorage.getItem('token');
-const user = JSON.parse(localStorage.getItem('user') || '{}');
-if (!token) window.location.replace('/login.html');
+// Auth guard (cookie-based)
+const token = null; // legacy
+let user = {};
 
-// Navbar user display
+async function ensureLoggedIn() {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) {
+      window.location.replace('/login.html');
+      return;
+    }
+    user = await res.json();
+    const navUserEl2 = document.getElementById('navUser');
+    if (navUserEl2 && user?.name) navUserEl2.textContent = user.name;
+  } catch (_) {
+    window.location.replace('/login.html');
+  }
+}
+
+ensureLoggedIn();
+
+
+// Navbar user display (cookie-based, set after ensureLoggedIn())
 const navUserEl = document.getElementById('navUser');
-if (navUserEl && user.name) navUserEl.textContent = user.name;
+if (navUserEl && user?.name) navUserEl.textContent = user.name;
 
-document.getElementById('navLogout').addEventListener('click', (e) => {
+
+document.getElementById('navLogout').addEventListener('click', async (e) => {
   e.preventDefault();
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch (_) {
+    // ignore
+  }
   localStorage.clear();
   window.location.replace('/login.html');
 });
+
 
 // ─── Load facilities ────────────────────────────────────────────────────────
 async function loadFacilities() {
