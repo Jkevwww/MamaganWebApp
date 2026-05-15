@@ -1263,7 +1263,6 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
 
   .ticket-page {
     padding: 0.25rem 0 0;
-    min-height: auto;
     background: #fff !important;
   }
 
