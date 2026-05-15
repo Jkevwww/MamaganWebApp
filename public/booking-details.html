@@ -17,7 +17,7 @@
     <nav>
       <a href="/facilities.html">Facilities</a>
       <a href="/my-bookings.html">My Bookings</a>
-      <a href="#" id="navUser" class="text-muted" style="opacity:0.85;cursor:default;max-width:180px;overflow:hidden;text-overflow:ellipsis;"></a>
+      <a href="#" id="navUser" class="text-muted nav-user" aria-label="User profile"></a>
       <button type="button" id="navLogout" class="btn btn-secondary btn-sm">Logout</button>
     </nav>
   </header>
@@ -25,13 +25,13 @@
   <main class="page-content">
     <div class="container narrow-container">
       <a href="/my-bookings.html" class="link-back">
-        <i data-lucide="arrow-left" style="width: 16px;" aria-hidden="true"></i> Back to My Bookings
+        <i data-lucide="arrow-left" class="icon-small"></i> Back to My Bookings
       </a>
 
       <div id="detailsContent" class="booking-detail-card">
-        <div class="booking-detail-body" style="padding:3rem;text-align:center;">
-          <div class="skeleton skeleton-title" style="margin:0 auto;width:40%;"></div>
-          <div class="skeleton skeleton-chart" style="margin-top:1.25rem;height:200px;"></div>
+        <div class="booking-detail-body booking-loading">
+          <div class="skeleton skeleton-title skeleton-title-center"></div>
+          <div class="skeleton skeleton-chart skeleton-chart-spacing"></div>
         </div>
       </div>
     </div>
@@ -102,7 +102,7 @@
       } catch (err) {
         document.getElementById('detailsContent').innerHTML = `
           <div class="booking-detail-body" style="padding:3rem;text-align:center;">
-            <i data-lucide="alert-circle" style="width:48px;height:48px;margin-bottom:1rem;color:var(--color-danger);"></i>
+            <i data-lucide="alert-circle" class="icon-large icon-danger"></i>
             <h3>Error loading details</h3>
             <p class="text-muted">${escHtml(err.message)}</p>
           </div>
@@ -139,8 +139,8 @@
               <div class="facility-thumb-row">
                 <img src="${escAttr(thumb)}" alt="">
                 <div>
-                  <div style="font-weight:700;font-size:1.1rem;color:var(--color-primary-dark);">${escHtml(b.facility_name)}</div>
-                  <div class="text-muted" style="font-size:0.88rem;">${escHtml(b.category)} • ${b.quantity} unit(s)</div>
+                  <div class="facility-title">${escHtml(b.facility_name)}</div>
+                  <div class="text-muted facility-subtitle">${escHtml(b.category)} • ${b.quantity} unit(s)</div>
                 </div>
               </div>
             </div>
@@ -167,11 +167,11 @@
             <h4>Payment Summary</h4>
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
               <div>
-                <div class="text-muted" style="font-size:0.85rem;">Total Amount</div>
-                <div style="font-size:1.5rem;font-weight:700;color:var(--color-primary-dark);">₱${Number(b.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                <div class="text-muted facility-subtitle">Total Amount</div>
+                <div class="facility-title">₱${Number(b.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
               </div>
               <div style="text-align:right;">
-                <div class="text-muted" style="font-size:0.85rem;">Payment Status</div>
+                <div class="text-muted facility-subtitle">Payment Status</div>
                 <span class="status-badge ${payClass}" style="margin-top:0.35rem;display:inline-block;">${escHtml(String(b.payment_status || '').toUpperCase())}</span>
               </div>
             </div>
