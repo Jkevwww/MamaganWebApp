@@ -1397,7 +1397,7 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
 
 /* ─── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .hero { text-align: center; justify-content: center; }
-  .hero-btns { justify-content: center; }
+  .hero { text-align: left; justify-content: flex-start; }
+  .hero-btns { justify-content: flex-start; }
   .container { padding: 0 1rem; }
 }
