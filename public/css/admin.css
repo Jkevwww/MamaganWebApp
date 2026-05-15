@@ -405,6 +405,12 @@ body.admin-body {
   align-items: center;
   margin-bottom: 1rem;
 }
+.table-toolbar .form-label {
+  margin: 0;
+}
+.table-toolbar .form-select {
+  max-width: 220px;
+}
 
 .table-card {
   background: #fff;
