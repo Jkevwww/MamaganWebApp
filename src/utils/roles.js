@@ -1,7 +1,16 @@
-const ADMIN_ROLES = new Set(['admin', 'ADMIN', 'STAFF', 'SUPER_ADMIN']);
+const ADMIN_ROLES = new Set(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'VIEWER']);
 
-function isAdminRole(role) {
-  return ADMIN_ROLES.has(role);
+function normalizeRole(value) {
+  return String(value || '').trim().toUpperCase();
 }
 
-module.exports = { ADMIN_ROLES, isAdminRole };
+function isAdminRole(role) {
+  return ADMIN_ROLES.has(normalizeRole(role));
+}
+
+function isAdminUser(user) {
+  if (!user) return false;
+  return isAdminRole(user.role) || isAdminRole(user.access_tier);
+}
+
+module.exports = { ADMIN_ROLES, normalizeRole, isAdminRole, isAdminUser };

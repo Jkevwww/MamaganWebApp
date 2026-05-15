@@ -1,5 +1,3 @@
-/* ─── Shared auth helpers ────────────────────────────────────────────────────── */
-
 function showAlert(id, message, type = 'error') {
   const el = document.getElementById(id);
   if (!el) return;
@@ -19,49 +17,95 @@ function setLoading(btnId, isLoading) {
   btn.textContent = isLoading ? 'Please wait...' : btn.dataset.originalText || btn.textContent;
 }
 
-const ADMIN_ROLES = new Set(['admin', 'ADMIN', 'STAFF', 'SUPER_ADMIN']);
+const ADMIN_TIERS = new Set(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'VIEWER']);
 
-function isAdminRole(role) {
-  return ADMIN_ROLES.has(role);
+function normalizeRole(value) {
+  return String(value || '').trim().toUpperCase();
 }
 
-function showOAuthError(alertId) {
+function isAdminRole(role) {
+  return ADMIN_TIERS.has(normalizeRole(role));
+}
+
+function isAdminUser(user) {
+  return Boolean(user && (isAdminRole(user.role) || isAdminRole(user.access_tier)));
+}
+
+function isSafeInternalPath(value) {
+  if (!value || typeof value !== 'string') return false;
+  if (!value.startsWith('/') || value.startsWith('//')) return false;
   try {
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get('error');
-    if (error === 'oauth_failed') {
-      showAlert(
-        alertId,
-        'Sign-in with Google or GitHub did not complete. Please try again or use email and password.',
-        'error'
-      );
-    }
+    const parsed = new URL(value, window.location.origin);
+    return parsed.origin === window.location.origin;
+  } catch (_) {
+    return false;
+  }
+}
+
+function getSafeNextPath() {
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get('next');
+  return isSafeInternalPath(next) ? next : null;
+}
+
+function canUseNextPath(user, next) {
+  if (!next) return false;
+  if (next.startsWith('/admin/')) return isAdminUser(user);
+  return true;
+}
+
+function defaultRedirectForUser(user) {
+  return isAdminUser(user) ? '/admin/dashboard.html' : '/facilities.html';
+}
+
+function redirectForUser(user) {
+  const next = getSafeNextPath();
+  if (canUseNextPath(user, next)) return next;
+  return defaultRedirectForUser(user);
+}
+
+function rememberUser(user) {
+  try {
+    localStorage.setItem('user', JSON.stringify(user || {}));
+  } catch (_) {
+    // ignore storage failures
+  }
+}
+
+function showLoginQueryMessage(alertId) {
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get('error');
+  if (error === 'oauth_failed') {
+    showAlert(
+      alertId,
+      'Sign-in with Google or GitHub did not complete. Please try again or use email and password.',
+      'error'
+    );
+  } else if (error === 'inactive') {
+    showAlert(alertId, 'This account is inactive. Please contact an administrator.', 'error');
+  } else if (error === 'admin_permission') {
+    showAlert(alertId, 'You do not have permission to access the admin panel.', 'error');
+  }
+}
+
+async function redirectIfAlreadyLoggedIn(alertId) {
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const user = await res.json();
+    rememberUser(user);
+    window.location.replace(redirectForUser(user));
   } catch (_) {
     // ignore
   }
 }
 
-/* ─── User login ────────────────────────────────────────────────────────────── */
 function initLoginForm(formId, alertId, btnId) {
   const btn = document.getElementById(btnId);
   if (btn) btn.dataset.originalText = btn.textContent;
 
-  showOAuthError(alertId);
-
-  (async () => {
-    try {
-      const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
-      if (res.ok) {
-        const data = await res.json();
-        const role = data?.role;
-        if (role === 'GUEST') window.location.replace('/facilities.html');
-        else if (isAdminRole(role)) window.location.replace('/admin/dashboard.html');
-        else window.location.replace('/facilities.html');
-      }
-    } catch (_) {
-      // ignore
-    }
-  })();
+  showLoginQueryMessage(alertId);
+  redirectIfAlreadyLoggedIn(alertId);
 
   const formEl = document.getElementById(formId);
   if (!formEl) return;
@@ -88,10 +132,8 @@ function initLoginForm(formId, alertId, btnId) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Login failed');
 
-      const role = data?.user?.role;
-      if (role === 'GUEST') window.location.replace('/facilities.html');
-      else if (isAdminRole(role)) window.location.replace('/admin/dashboard.html');
-      else window.location.replace('/facilities.html');
+      rememberUser(data.user);
+      window.location.replace(redirectForUser(data.user));
     } catch (err) {
       showAlert(alertId, err.message);
     } finally {
@@ -100,25 +142,11 @@ function initLoginForm(formId, alertId, btnId) {
   });
 }
 
-/* ─── User register ─────────────────────────────────────────────────────────── */
 function initRegisterForm(formId, alertId, btnId) {
   const btn = document.getElementById(btnId);
   if (btn) btn.dataset.originalText = btn.textContent;
 
-  (async () => {
-    try {
-      const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
-      if (res.ok) {
-        const data = await res.json();
-        const role = data?.role;
-        if (role === 'GUEST') window.location.replace('/facilities.html');
-        else if (isAdminRole(role)) window.location.replace('/admin/dashboard.html');
-        else window.location.replace('/facilities.html');
-      }
-    } catch (_) {
-      // ignore
-    }
-  })();
+  redirectIfAlreadyLoggedIn(alertId);
 
   const formEl = document.getElementById(formId);
   if (!formEl) return;
@@ -152,10 +180,8 @@ function initRegisterForm(formId, alertId, btnId) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
 
-      const role = data?.user?.role;
-      if (role === 'GUEST') window.location.replace('/facilities.html');
-      else if (isAdminRole(role)) window.location.replace('/admin/dashboard.html');
-      else window.location.replace('/facilities.html');
+      rememberUser(data.user);
+      window.location.replace('/facilities.html');
     } catch (err) {
       showAlert(alertId, err.message);
     } finally {
@@ -164,64 +190,10 @@ function initRegisterForm(formId, alertId, btnId) {
   });
 }
 
-/* ─── Admin login ───────────────────────────────────────────────────────────── */
-function initAdminLoginForm(formId, alertId, btnId) {
-  const btn = document.getElementById(btnId);
-  if (btn) btn.dataset.originalText = btn.textContent;
-
-  showOAuthError(alertId);
-
-  (async () => {
-    try {
-      const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
-      if (res.ok) {
-        const data = await res.json();
-        if (isAdminRole(data?.role)) {
-          window.location.replace('/admin/dashboard.html');
-        }
-      }
-    } catch (_) {
-      // ignore
-    }
-  })();
-
-  const formEl = document.getElementById(formId);
-  if (!formEl) return;
-
-  formEl.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideAlert(alertId);
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-
-    if (!email || !password) {
-      showAlert(alertId, 'Please fill in all fields.');
-      return;
-    }
-
-    setLoading(btnId, true);
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Login failed');
-      if (!isAdminRole(data.user.role)) {
-        throw new Error('Access denied: not an admin account');
-      }
-      window.location.replace('/admin/dashboard.html');
-    } catch (err) {
-      showAlert(alertId, err.message);
-    } finally {
-      setLoading(btnId, false);
-    }
-  });
+function initAdminLoginForm() {
+  window.location.replace('/login.html?next=/admin/dashboard.html');
 }
 
-/* ─── Logout helper ─────────────────────────────────────────────────────────── */
 async function logout(redirectTo = '/login.html') {
   try {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
@@ -233,22 +205,12 @@ async function logout(redirectTo = '/login.html') {
   window.location.replace(redirectTo);
 }
 
-/* ─── Auth guard helper (call at top of protected pages) ────────────────────── */
 function requireAuth(redirectTo = '/login.html') {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    window.location.replace(redirectTo);
-    return null;
-  }
-  return token;
+  window.location.replace(redirectTo);
+  return null;
 }
 
-function requireAdmin(redirectTo = '/admin/login.html') {
-  const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (!token || !isAdminRole(user.role)) {
-    window.location.replace(redirectTo);
-    return null;
-  }
-  return token;
+function requireAdmin(redirectTo = '/login.html?next=/admin/dashboard.html') {
+  window.location.replace(redirectTo);
+  return null;
 }

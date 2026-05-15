@@ -3,6 +3,16 @@
 let user = null;
 const skeleton = window.Skeleton;
 
+function showPageMessageFromQuery() {
+  const alertEl = document.getElementById('pageAlert');
+  if (!alertEl) return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('error') === 'admin_permission') {
+    alertEl.textContent = 'You do not have permission to access the admin panel.';
+    alertEl.className = 'alert alert-error show';
+  }
+}
+
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth/me');
@@ -24,6 +34,7 @@ async function checkAuth() {
   }
 }
 
+showPageMessageFromQuery();
 checkAuth();
 
 if (document.getElementById('navLogout')) {

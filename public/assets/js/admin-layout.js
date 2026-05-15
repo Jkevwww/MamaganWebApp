@@ -31,11 +31,45 @@
     document.getElementById('sidebarOverlay')?.classList.add('visible');
   }
 
-  function injectLayout() {
+  const ADMIN_TIERS = new Set(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'VIEWER']);
+
+  function isAdminUser(user) {
+    const role = String(user?.role || '').trim().toUpperCase();
+    const tier = String(user?.access_tier || '').trim().toUpperCase();
+    return ADMIN_TIERS.has(role) || ADMIN_TIERS.has(tier);
+  }
+
+  async function getCurrentAdminUser() {
+    const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (res.status === 401) {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.replace(`/login.html?next=${next}`);
+      return null;
+    }
+    if (!res.ok) {
+      window.location.replace('/login.html');
+      return null;
+    }
+    const user = await res.json();
+    if (!isAdminUser(user)) {
+      window.location.replace('/facilities.html?error=admin_permission');
+      return null;
+    }
+    try {
+      localStorage.setItem('user', JSON.stringify(user));
+    } catch (_) {
+      // ignore storage failures
+    }
+    return user;
+  }
+
+  async function injectLayout() {
     if (document.getElementById('admin-layout-injected')) return;
 
+    const user = await getCurrentAdminUser();
+    if (!user) return;
+
     const currentPath = window.location.pathname;
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     const sidebarHtml = `
       <aside class="admin-sidebar" id="adminSidebar" aria-label="Admin navigation">
@@ -83,7 +117,7 @@
               <span class="admin-name">${user.name || 'Staff'}</span>
               <span class="admin-role">${(user.role || 'ADMIN').toString().toUpperCase()}</span>
             </div>
-            <img src="/default-avatar.svg" alt="" class="admin-avatar" width="40" height="40">
+            <img src="${user.avatar_url || '/default-avatar.svg'}" alt="" class="admin-avatar" width="40" height="40">
           </div>
         </div>
       </header>
@@ -116,7 +150,7 @@
         /* ignore */
       }
       localStorage.clear();
-      window.location.replace('/admin/login.html');
+      window.location.replace('/login.html');
     });
 
     if (window.lucide) lucide.createIcons();

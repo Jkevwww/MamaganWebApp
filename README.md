@@ -39,6 +39,7 @@ Important variables:
 - **Server:** `NODE_ENV`, `PORT` (default in code is `10000` if unset), `SERVER_URL`, `CLIENT_URL`
 - **Auth:** `JWT_SECRET`, `SESSION_SECRET` (session store is used for OAuth state only; app auth is JWT in an HTTP-only cookie)
 - **MySQL:** `MYSQL_*`, `MYSQL_SSL_CA` for Aiven
+- **Admin bootstrap:** `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_PHONE`
 - **OAuth:** Google and GitHub client IDs/secrets and callback URLs (see below)
 - **Redirects:** `OAUTH_SUCCESS_*`, `OAUTH_FAILURE_REDIRECT` (must be **relative paths** starting with `/` to avoid open redirects)
 - **PayMongo:** `PAYMONGO_*`, `MOCK_PAYMENTS` for local testing
@@ -51,6 +52,12 @@ npm run db:seed
 ```
 
 Migrations are additive where possible; new OAuth and logging columns use `CREATE TABLE IF NOT EXISTS` / conditional `ALTER` patterns. Review `database/migrations/` if you maintain a long-lived production database.
+
+To create or repair only the default admin account after setting the `ADMIN_*` variables:
+
+```bash
+npm run create-admin
+```
 
 ### 4) Run
 
@@ -69,6 +76,16 @@ Default local URL when `PORT=10000`: `http://localhost:10000`
 ---
 
 ## Authentication
+
+### Unified login
+
+Use `/login.html` for both tourists and admins. There is no separate admin login flow. After login, the app checks `role` and `access_tier`:
+
+- `SUPER_ADMIN`, `ADMIN`, `STAFF`, and `VIEWER` go to `/admin/dashboard.html`.
+- `GUEST` goes to `/facilities.html`.
+- `/admin/login.html` redirects to `/login.html?next=/admin/dashboard.html`.
+
+The optional `next` query parameter only accepts same-site relative paths. Admin `next` paths are honored only for admin/staff/viewer accounts.
 
 ### Email / password
 
@@ -133,7 +150,32 @@ Set:
 
 ### Admin OAuth
 
-The admin login page offers the same Google/GitHub links. **OAuth never creates an admin:** a Google/GitHub sign-in only reaches the admin dashboard if the linked user already has an admin/staff role for that email.
+The unified login page offers the same Google/GitHub links. **OAuth never creates an admin:** a Google/GitHub sign-in only reaches the admin dashboard if the linked user already has an admin/staff/viewer role or access tier for that email.
+
+### Admin account creation
+
+Set these variables locally or in Render:
+
+```bash
+ADMIN_NAME=
+ADMIN_EMAIL=
+ADMIN_PASSWORD=
+ADMIN_PHONE=
+```
+
+Then run:
+
+```bash
+npm run db:seed
+```
+
+Optional admin-only repair/create command:
+
+```bash
+npm run create-admin
+```
+
+The admin bootstrap creates or updates the account as `role = ADMIN` and `access_tier = SUPER_ADMIN`, hashes `ADMIN_PASSWORD` with bcrypt, and never stores a hardcoded password.
 
 ### Optional route
 
@@ -160,15 +202,16 @@ Set `MYSQL_SSL_CA` to the CA PEM. You may use literal `\n` in a single-line env 
 - `NODE_ENV=production`, `PORT=10000`
 - `SERVER_URL` and `CLIENT_URL` to `https://YOUR-RENDER-APP.onrender.com`
 - `GOOGLE_CALLBACK_URL` / `GITHUB_CALLBACK_URL` with the same host
+- `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_PHONE` for the default admin account
 - All secrets (`JWT_SECRET`, `SESSION_SECRET`, MySQL, OAuth, PayMongo) in the Render dashboard (`sync: false` placeholders in YAML)
 
-Build: `npm install` — Start: `npm start`
+Build: `npm install` — Start: `npm start`. Redeploy after changing Render environment variables, then run `npm run db:seed` or `npm run create-admin` from a shell/job if the admin account needs to be created.
 
 ---
 
 ## System logs
 
-Login, logout, and OAuth events are written to `system_logs` when the table exists (see migrations `013` and `014`). Actions include for example `LOCAL_LOGIN_SUCCESS`, `GOOGLE_LOGIN_SUCCESS`, `GITHUB_LOGIN_FAILED`, `OAUTH_ACCOUNT_LINKED`, `USER_CREATED_FROM_OAUTH`, and `LOGOUT`. Timestamps are stored in `created_at`.
+Login, logout, redirects, admin bootstrap, unauthorized admin access, and OAuth events are written to `system_logs` when the table exists. Actions include for example `LOCAL_LOGIN_SUCCESS`, `LOGIN_REDIRECT_ADMIN`, `LOGIN_REDIRECT_GUEST`, `ADMIN_ACCOUNT_CREATED`, `ADMIN_ACCOUNT_UPDATED`, `UNAUTHORIZED_ADMIN_ACCESS`, `ADMIN_LOGIN_PAGE_REDIRECTED`, `GOOGLE_LOGIN_SUCCESS`, `GITHUB_LOGIN_FAILED`, `OAUTH_ACCOUNT_LINKED`, `USER_CREATED_FROM_OAUTH`, and `LOGOUT`. Timestamps are stored in `created_at`.
 
 ---
 
@@ -214,3 +257,4 @@ For local development without PayMongo, set `MOCK_PAYMENTS=true`.
 | Dev (nodemon) | `npm run dev` |
 | Migrations | `npm run db:migrate` |
 | Seed | `npm run db:seed` |
+| Create/update admin | `npm run create-admin` |

@@ -135,24 +135,27 @@
     // Initialize Lucide Icons
     lucide.createIcons();
 
-    // Simple auth check for landing page
-    const token = localStorage.getItem('token');
-    if (token) {
-      document.querySelectorAll('.auth-only-guest').forEach(el => el.style.display = 'none');
-      document.querySelectorAll('.auth-only-user').forEach(el => el.style.display = 'inline-block');
-      const logoutBtn = document.getElementById('logout-btn');
-      if (logoutBtn) {
-        logoutBtn.style.display = 'inline-block';
-        logoutBtn.addEventListener('click', () => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.reload();
-        });
+    async function refreshLandingAuth() {
+      const showAuthed = (isAuthed) => {
+        document.querySelectorAll('.auth-only-guest').forEach(el => el.style.display = isAuthed ? 'none' : 'inline-block');
+        document.querySelectorAll('.auth-only-user').forEach(el => el.style.display = isAuthed ? 'inline-block' : 'none');
+      };
+
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        showAuthed(res.ok);
+      } catch (_) {
+        showAuthed(false);
       }
-    } else {
-      document.querySelectorAll('.auth-only-guest').forEach(el => el.style.display = 'inline-block');
-      document.querySelectorAll('.auth-only-user').forEach(el => el.style.display = 'none');
     }
+
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        await logout('/');
+      });
+    }
+    refreshLandingAuth();
   </script>
 </body>
 </html>

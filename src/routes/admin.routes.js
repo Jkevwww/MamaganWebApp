@@ -3,6 +3,7 @@ const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const adminMiddleware = require('../middleware/admin');
 const authMiddleware = require('../middleware/auth');
+const { requirePermission } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 
@@ -43,8 +44,8 @@ router.get('/bookings', adminController.listBookings);
 // Facilities CRUD
 router.get('/facilities', adminController.getAllFacilities);
 router.get('/facilities/:id', adminController.getFacilityById);
-router.post('/facilities', upload.single('image'), adminController.createFacility);
-router.put('/facilities/:id', upload.single('image'), adminController.updateFacility);
-router.delete('/facilities/:id', adminController.deleteFacility);
+router.post('/facilities', requirePermission(['SUPER_ADMIN', 'ADMIN']), upload.single('image'), adminController.createFacility);
+router.put('/facilities/:id', requirePermission(['SUPER_ADMIN', 'ADMIN']), upload.single('image'), adminController.updateFacility);
+router.delete('/facilities/:id', requirePermission(['SUPER_ADMIN', 'ADMIN']), adminController.deleteFacility);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const authService = require('../services/auth.service');
 const { getCookieOptions, getTokenCookieName, getClearCookieOptions } = require('../utils/authCookie');
 const { logSystemAction } = require('../utils/logger');
+const { isAdminUser } = require('../utils/roles');
 
 function reqMeta(req) {
   return {
@@ -72,8 +73,20 @@ async function login(req, res, next) {
       userAgent,
     });
 
+    const redirectTo = isAdminUser(user) ? '/admin/dashboard.html' : '/facilities.html';
+    await logSystemAction({
+      userId: user.id,
+      action: isAdminUser(user) ? 'LOGIN_REDIRECT_ADMIN' : 'LOGIN_REDIRECT_GUEST',
+      module: 'AUTH',
+      targetType: 'redirect',
+      targetId: redirectTo,
+      details: { method: 'password', role: user.role, access_tier: user.access_tier },
+      ipAddress,
+      userAgent,
+    });
+
     res.cookie(getTokenCookieName(), token, { ...getCookieOptions() });
-    return res.status(200).json({ user });
+    return res.status(200).json({ user, redirect_to: redirectTo });
   } catch (err) {
     await logSystemAction({
       userId: null,

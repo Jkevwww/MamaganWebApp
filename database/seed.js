@@ -1,7 +1,7 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcrypt');
 const { getConnectionOptions } = require('./db-config');
+const { createOrUpdateAdminAccount } = require('./create-admin');
 
 const FACILITIES = [
   // COTTAGES
@@ -179,19 +179,7 @@ async function seed() {
   const conn = await mysql.createConnection(getConnectionOptions());
   console.log('✅ Connected to database for seeding\n');
 
-  // Seed Admin if needed
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@mamagan.com';
-  const adminPass = process.env.ADMIN_PASSWORD || 'Admin123!';
-  const [existingAdmin] = await conn.query('SELECT id FROM users WHERE email = ?', [adminEmail]);
-  if (existingAdmin.length === 0) {
-    const hashed = await bcrypt.hash(adminPass, 10);
-    await conn.query(
-      `INSERT INTO users (name, email, phone, password_hash, password, role, access_tier, active)
-       VALUES (?, ?, ?, ?, NULL, 'ADMIN', 'ADMIN', 1)`,
-      ['Administrator', adminEmail, '', hashed]
-    );
-    console.log('  ✅ Admin user created');
-  }
+  await createOrUpdateAdminAccount(conn, { skipWhenMissing: true });
 
   // Clear existing facilities to avoid conflicts with new structure
   // In a real app we'd be more careful, but for seed we can reset

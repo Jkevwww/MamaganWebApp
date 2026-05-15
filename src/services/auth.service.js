@@ -43,7 +43,7 @@ async function register({ name, email, phone, password }) {
     [name, email, phone, hashed, null, role, accessTier, 1]
   );
 
-  const token = signToken({ id: result.insertId, role });
+  const token = signToken({ id: result.insertId, role, access_tier: accessTier });
 
   return {
     token,
@@ -93,7 +93,7 @@ async function login({ email, password }) {
 
   await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
 
-  const token = signToken({ id: user.id, role: user.role });
+  const token = signToken({ id: user.id, role: user.role, access_tier: user.access_tier });
 
   const fresh = {
     ...user,
@@ -118,4 +118,3 @@ async function getMe(userId) {
 }
 
 module.exports = { register, login, getMe };
-

@@ -3,62 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Login - Mamagan</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/admin.css">
-  <link rel="stylesheet" href="/css/google_oauth.css">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <meta http-equiv="refresh" content="0; url=/login.html?next=/admin/dashboard.html">
+  <title>Redirecting - Mamagan</title>
+  <link rel="canonical" href="/login.html">
 </head>
-<body class="admin-login-body">
-  <div class="admin-login-wrapper">
-    <div class="admin-login-card">
-      <div class="text-center admin-login-logo-block">
-        <img src="/admin-logo.svg" alt="Mamagan Admin" height="40">
-      </div>
-      
-      <h1>Admin Portal</h1>
-      <p class="subtitle">Secure access for staff and administrators</p>
-
-      <div class="alert alert-error" id="alertBox"></div>
-
-      <form id="adminLoginForm" novalidate>
-        <div class="form-group">
-          <label for="email"><i data-lucide="shield" class="admin-login-label-icon"></i> Admin Email</label>
-          <input type="email" id="email" placeholder="admin@mamagan.com" required />
-        </div>
-        <div class="form-group">
-          <label for="password"><i data-lucide="key" class="admin-login-label-icon"></i> Password</label>
-          <input type="password" id="password" placeholder="••••••••" required />
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Authenticate</button>
-      </form>
-
-      <p class="admin-oauth-hint">OAuth sign-in only works if your Google or GitHub account uses an email that already exists as an admin or staff user in this system.</p>
-
-      <div class="oauth-divider admin-oauth-divider">
-        <hr>
-        <span>or</span>
-        <hr>
-      </div>
-
-      <div class="oauth-stack">
-        <a class="btn btn-google btn-block" href="/api/auth/google">Continue with Google</a>
-        <a class="btn btn-github btn-block" href="/api/auth/github">Continue with GitHub</a>
-      </div>
-      
-      <div class="text-center admin-login-back-wrap">
-        <a href="/" class="admin-login-back-link">
-          <i data-lucide="arrow-left" class="admin-login-back-icon"></i> Back to Main Site
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <script src="/js/auth.js"></script>
+<body>
   <script>
-    lucide.createIcons();
-    initAdminLoginForm('adminLoginForm', 'alertBox', 'submitBtn');
+    window.location.replace('/login.html?next=/admin/dashboard.html');
   </script>
+  <p>Redirecting to <a href="/login.html?next=/admin/dashboard.html">Mamagan Resort Login</a>.</p>
 </body>
 </html>

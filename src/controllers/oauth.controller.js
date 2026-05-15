@@ -1,7 +1,7 @@
 const passport = require('passport');
 
 const { getCookieOptions, getTokenCookieName } = require('../utils/authCookie');
-const { isAdminRole } = require('../utils/roles');
+const { isAdminUser } = require('../utils/roles');
 const {
   oauthFailureRedirect,
   oauthSuccessGuestRedirect,
@@ -33,9 +33,26 @@ async function finishOAuthSuccess(req, res, provider, authPayload) {
     userAgent,
   });
 
-  const dest = isAdminRole(authPayload.user?.role)
+  const isAdmin = isAdminUser(authPayload.user);
+  const dest = isAdmin
     ? oauthSuccessAdminRedirect()
     : oauthSuccessGuestRedirect();
+
+  await logSystemAction({
+    userId: authPayload.user?.id,
+    action: isAdmin ? 'LOGIN_REDIRECT_ADMIN' : 'LOGIN_REDIRECT_GUEST',
+    module: 'AUTH',
+    targetType: 'redirect',
+    targetId: dest,
+    details: {
+      provider,
+      role: authPayload.user?.role,
+      access_tier: authPayload.user?.access_tier,
+    },
+    ipAddress,
+    userAgent,
+  });
+
   return res.redirect(dest);
 }
 

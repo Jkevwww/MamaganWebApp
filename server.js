@@ -6,8 +6,12 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
-const { testConnection } = require('./src/config/db');
+const { pool, testConnection } = require('./src/config/db');
 const { errorHandler } = require('./src/middleware/error');
+const { verifyToken } = require('./src/utils/jwt');
+const { getTokenCookieName } = require('./src/utils/authCookie');
+const { isAdminUser } = require('./src/utils/roles');
+const { logSystemAction } = require('./src/utils/logger');
 
 const authRoutes = require('./src/routes/auth.routes');
 const facilityRoutes = require('./src/routes/facility.routes');
@@ -89,6 +93,99 @@ const authApiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests. Please try again later.' },
+});
+
+function readAuthToken(req) {
+  const cookieName = getTokenCookieName();
+  if (req.cookies?.[cookieName]) return req.cookies[cookieName];
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) return authHeader.split(' ')[1];
+  return null;
+}
+
+function clientMeta(req) {
+  return {
+    ipAddress: req.ip || req.connection?.remoteAddress || null,
+    userAgent: req.headers['user-agent'] || null,
+  };
+}
+
+function currentAdminPath(req) {
+  return req.originalUrl && req.originalUrl.startsWith('/admin/')
+    ? req.originalUrl
+    : '/admin/dashboard.html';
+}
+
+async function loadUserFromRequest(req) {
+  const token = readAuthToken(req);
+  if (!token) return null;
+  const decoded = verifyToken(token);
+  const [rows] = await pool.query(
+    `SELECT id, name, email, phone, role, access_tier, avatar_url, active, last_login_at, created_at, updated_at
+     FROM users
+     WHERE id = ?`,
+    [decoded.id]
+  );
+  return rows[0] || null;
+}
+
+app.get('/admin/login.html', async (req, res) => {
+  const { ipAddress, userAgent } = clientMeta(req);
+  await logSystemAction({
+    userId: null,
+    action: 'ADMIN_LOGIN_PAGE_REDIRECTED',
+    module: 'AUTH',
+    targetType: 'page',
+    targetId: '/admin/login.html',
+    details: { redirect_to: '/login.html?next=/admin/dashboard.html' },
+    ipAddress,
+    userAgent,
+  });
+  return res.redirect(302, '/login.html?next=/admin/dashboard.html');
+});
+
+app.get('/admin/*.html', async (req, res, next) => {
+  const { ipAddress, userAgent } = clientMeta(req);
+  const loginTarget = `/login.html?next=${encodeURIComponent(currentAdminPath(req))}`;
+
+  try {
+    const user = await loadUserFromRequest(req);
+    if (!user) {
+      return res.redirect(302, loginTarget);
+    }
+
+    if (!(user.active ?? 1)) {
+      return res.redirect(302, '/login.html?error=inactive');
+    }
+
+    if (!isAdminUser(user)) {
+      await logSystemAction({
+        userId: user.id,
+        action: 'UNAUTHORIZED_ADMIN_ACCESS',
+        module: 'AUTH',
+        targetType: 'admin_page',
+        targetId: currentAdminPath(req),
+        details: { role: user.role, access_tier: user.access_tier },
+        ipAddress,
+        userAgent,
+      });
+      return res.redirect(302, '/facilities.html?error=admin_permission');
+    }
+
+    return next();
+  } catch (err) {
+    await logSystemAction({
+      userId: null,
+      action: 'UNAUTHORIZED_ADMIN_ACCESS',
+      module: 'AUTH',
+      targetType: 'admin_page',
+      targetId: currentAdminPath(req),
+      details: { message: err.message },
+      ipAddress,
+      userAgent,
+    });
+    return res.redirect(302, loginTarget);
+  }
 });
 
 // ─── Static Files ────────────────────────────────────────────────────────────

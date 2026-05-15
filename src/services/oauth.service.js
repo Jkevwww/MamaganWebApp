@@ -93,7 +93,7 @@ async function linkOrCreateOAuthUser({
 
     await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
 
-    const token = signToken({ id: user.id, role: user.role });
+    const token = signToken({ id: user.id, role: user.role, access_tier: user.access_tier });
     return {
       token,
       user: sanitizeUser({ ...user, last_login_at: new Date() }),
@@ -137,7 +137,7 @@ async function linkOrCreateOAuthUser({
 
     await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
 
-    const token = signToken({ id: user.id, role: user.role });
+    const token = signToken({ id: user.id, role: user.role, access_tier: user.access_tier });
     return {
       token,
       user: sanitizeUser({ ...user, last_login_at: new Date() }),
@@ -179,7 +179,7 @@ async function linkOrCreateOAuthUser({
       userAgent,
     });
 
-    const token = signToken({ id: userId, role });
+    const token = signToken({ id: userId, role, access_tier: accessTier });
     return {
       token,
       user: sanitizeUser({
