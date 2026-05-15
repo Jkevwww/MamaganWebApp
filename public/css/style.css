@@ -172,7 +172,9 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
 
 /* ─── Hero ───────────────────────────────────────────────────────────────────── */
 .hero {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-navy) 100%);
+  background:
+    linear-gradient(90deg, rgba(8, 38, 48, 0.68), rgba(8, 38, 48, 0.34)),
+    url("/assets/background/background.jpg") center / cover no-repeat;
   color: var(--white);
   padding: clamp(3rem, 8vw, 6rem) 1.5rem;
   display: flex;
@@ -184,14 +186,14 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
 
 .hero-content { max-width: 600px; }
 .hero-content h1 {
-  font-size: clamp(2rem, 5vw, 3rem);
+  font-size: clamp(2.1rem, 5.2vw, 3.8rem);
   margin-bottom: 1rem;
   line-height: 1.15;
 }
 .hero-content p { font-size: 1.1rem; margin-bottom: 2rem; opacity: 0.92; }
 .hero-btns { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 
-.hero-animation { width: 100%; max-width: 450px; }
+.hero-animation { width: 100%; max-width: 540px; }
 
 /* ─── Generic cards ─────────────────────────────────────────────────────────── */
 .card,
