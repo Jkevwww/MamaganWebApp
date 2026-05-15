@@ -431,7 +431,6 @@ body.admin-body {
 .table-responsive {
   width: 100%;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 table,
@@ -757,4 +756,16 @@ body.admin-login-body {
   .dashboard-stats-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─── Skeleton loading variations for dashboard stats ───────────────────────── */
+.skeleton-line-label {
+  width: 55%;
+  height: 12px;
+}
+
+.skeleton-line-value {
+  width: 70%;
+  height: 22px;
+  margin-top: 10px;
 }
