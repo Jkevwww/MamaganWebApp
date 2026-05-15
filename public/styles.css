@@ -1,5 +1,9 @@
 /* Extracted inline HTML styles. Keep this file loaded after /css/style.css. */
 
+.auth-card {
+  max-width: 500px;
+}
+
 .auth-logo-block {
   margin-bottom: 2rem;
 }
