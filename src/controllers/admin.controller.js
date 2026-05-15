@@ -124,6 +124,15 @@ async function deleteFacility(req, res, next) {
   }
 }
 
+async function listBookings(req, res, next) {
+  try {
+    const rows = await adminService.listBookings();
+    res.status(200).json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboardSummary,
   getRevenueChart,
@@ -133,5 +142,6 @@ module.exports = {
   getFacilityById,
   createFacility,
   updateFacility,
-  deleteFacility
+  deleteFacility,
+  listBookings,
 };

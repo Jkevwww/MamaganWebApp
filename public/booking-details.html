@@ -17,29 +17,75 @@
     <nav>
       <a href="/facilities.html">Facilities</a>
       <a href="/my-bookings.html">My Bookings</a>
-      <a href="#" id="navUser" style="opacity:.7; cursor:default;"></a>
-      <button id="navLogout" class="btn btn-secondary" style="padding: 0.4rem 1rem; margin-left: 1rem;">Logout</button>
+      <a href="#" id="navUser" class="text-muted" style="opacity:0.85;cursor:default;max-width:180px;overflow:hidden;text-overflow:ellipsis;"></a>
+      <button type="button" id="navLogout" class="btn btn-secondary btn-sm">Logout</button>
     </nav>
   </header>
 
   <main class="page-content">
-    <div class="container" style="max-width: 800px;">
-      <a href="/my-bookings.html" style="display: flex; align-items: center; gap: 0.5rem; color: #64748b; margin-bottom: 2rem; font-size: 0.9rem;">
-        <i data-lucide="arrow-left" style="width: 16px;"></i> Back to My Bookings
+    <div class="container narrow-container">
+      <a href="/my-bookings.html" class="link-back">
+        <i data-lucide="arrow-left" style="width: 16px;" aria-hidden="true"></i> Back to My Bookings
       </a>
 
-      <div id="detailsContent" style="background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08);">
-        <!-- Content loaded by JS -->
-        <div style="padding: 4rem; text-align: center;">
-          <div class="skeleton" style="height: 40px; width: 40%; margin: 0 auto 1rem;"></div>
-          <div class="skeleton" style="height: 200px; width: 100%;"></div>
+      <div id="detailsContent" class="booking-detail-card">
+        <div class="booking-detail-body" style="padding:3rem;text-align:center;">
+          <div class="skeleton skeleton-title" style="margin:0 auto;width:40%;"></div>
+          <div class="skeleton skeleton-chart" style="margin-top:1.25rem;height:200px;"></div>
         </div>
       </div>
     </div>
   </main>
 
   <script>
+    function escHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escAttr(str) {
+      return String(str ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    }
+
+    function paymentStatusClass(ps) {
+      return String(ps || '').toLowerCase() === 'paid' ? 'status-paid' : 'status-pending';
+    }
+
     const bookingId = new URLSearchParams(window.location.search).get('id');
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (!res.ok) {
+          const dest = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.replace(`/login.html?redirect=${dest}`);
+          return false;
+        }
+        const user = await res.json();
+        const navUserEl = document.getElementById('navUser');
+        if (navUserEl && user?.name) navUserEl.textContent = user.name;
+        return true;
+      } catch (_) {
+        window.location.replace('/login.html');
+        return false;
+      }
+    }
+
+    if (document.getElementById('navLogout')) {
+      document.getElementById('navLogout').addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+        } catch (_) {}
+        localStorage.clear();
+        window.location.replace('/');
+      });
+    }
 
     async function loadDetails() {
       if (!bookingId) {
@@ -48,17 +94,17 @@
       }
 
       try {
-        const res = await fetch(`/api/facilities/bookings/${bookingId}`);
+        const res = await fetch(`/api/facilities/bookings/${bookingId}`, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Booking not found');
         const b = await res.json();
-        
+
         renderDetails(b);
       } catch (err) {
         document.getElementById('detailsContent').innerHTML = `
-          <div style="padding: 4rem; text-align: center; color: var(--error);">
-            <i data-lucide="alert-circle" style="width: 48px; height: 48px; margin-bottom: 1rem;"></i>
+          <div class="booking-detail-body" style="padding:3rem;text-align:center;">
+            <i data-lucide="alert-circle" style="width:48px;height:48px;margin-bottom:1rem;color:var(--color-danger);"></i>
             <h3>Error loading details</h3>
-            <p>${err.message}</p>
+            <p class="text-muted">${escHtml(err.message)}</p>
           </div>
         `;
         lucide.createIcons();
@@ -68,99 +114,103 @@
     function renderDetails(b) {
       const content = document.getElementById('detailsContent');
       const isPending = b.payment_status === 'pending' && b.status !== 'cancelled';
-      
+      const timeStart = b.start_time ? String(b.start_time).substring(0, 5) : '';
+      const timeEnd = b.end_time ? String(b.end_time).substring(0, 5) : '';
+      const expiresLine = b.expires_at
+        ? `Please complete your payment before it expires at <strong>${escHtml(new Date(b.expires_at).toLocaleTimeString())}</strong>.`
+        : 'Please complete your payment before it expires. Check your email for the deadline.';
+
+      const thumb = b.image_url || 'https://placehold.co/100x100';
+      const payClass = paymentStatusClass(b.payment_status);
+
       content.innerHTML = `
-        <div style="background: var(--primary); color: #fff; padding: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <div class="booking-detail-hero">
           <div>
-            <h2 style="margin: 0; font-size: 1.8rem;">Booking #${b.id.toString().padStart(4, '0')}</h2>
-            <p style="margin: 0.5rem 0 0; opacity: 0.9;">Created on ${new Date(b.created_at).toLocaleDateString()}</p>
+            <h2>Booking #${String(b.id).padStart(4, '0')}</h2>
+            <p>Created on ${escHtml(new Date(b.created_at).toLocaleDateString())}</p>
           </div>
-          <span class="badge" style="background: rgba(255,255,255,0.2); color: #fff; padding: 0.5rem 1rem; font-size: 1rem; border: 1px solid rgba(255,255,255,0.3);">
-            ${b.status.toUpperCase()}
-          </span>
+          <span class="booking-hero-badge">${escHtml(String(b.status || '').toUpperCase())}</span>
         </div>
 
-        <div style="padding: 2rem;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+        <div class="booking-detail-body">
+          <div class="booking-detail-grid">
             <div>
-              <h4 style="text-transform: uppercase; font-size: 0.75rem; color: #64748b; letter-spacing: 1px; margin-bottom: 1rem;">Facility Information</h4>
-              <div style="display: flex; gap: 1rem; align-items: center;">
-                <img src="${b.image_url || 'https://placehold.co/100x100'}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+              <h4 class="section-label">Facility Information</h4>
+              <div class="facility-thumb-row">
+                <img src="${escAttr(thumb)}" alt="">
                 <div>
-                  <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${b.facility_name}</div>
-                  <div style="font-size: 0.85rem; color: #64748b;">${b.category} • ${b.quantity} unit(s)</div>
+                  <div style="font-weight:700;font-size:1.1rem;color:var(--color-primary-dark);">${escHtml(b.facility_name)}</div>
+                  <div class="text-muted" style="font-size:0.88rem;">${escHtml(b.category)} • ${b.quantity} unit(s)</div>
                 </div>
               </div>
             </div>
             <div>
-              <h4 style="text-transform: uppercase; font-size: 0.75rem; color: #64748b; letter-spacing: 1px; margin-bottom: 1rem;">Reservation Details</h4>
-              <div style="line-height: 1.8;">
-                <div style="display: flex; justify-content: space-between;">
-                   <span style="color: #64748b;">Date:</span>
-                   <span style="font-weight: 600;">${new Date(b.date).toLocaleDateString()}</span>
+              <h4 class="section-label">Reservation Details</h4>
+              <div>
+                <div class="kv-row">
+                  <span>Date</span>
+                  <span>${escHtml(new Date(b.date).toLocaleDateString())}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                   <span style="color: #64748b;">Time:</span>
-                   <span style="font-weight: 600;">${b.start_time.substring(0,5)} - ${b.end_time.substring(0,5)}</span>
+                <div class="kv-row">
+                  <span>Time</span>
+                  <span>${escHtml(timeStart)} - ${escHtml(timeEnd)}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                   <span style="color: #64748b;">Guests:</span>
-                   <span style="font-weight: 600;">${b.guest_count} pax</span>
+                <div class="kv-row">
+                  <span>Guests</span>
+                  <span>${b.guest_count} pax</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div style="background: #f8fafc; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-            <h4 style="margin-bottom: 1rem;">Payment Summary</h4>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-               <div>
-                 <div style="font-size: 0.85rem; color: #64748b;">Total Amount</div>
-                 <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">₱${Number(b.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-               </div>
-               <div style="text-align: right;">
-                 <div style="font-size: 0.85rem; color: #64748b;">Payment Status</div>
-                 <span class="badge ${b.payment_status === 'paid' ? 'status-approved' : 'status-pending'}" style="margin-top: 0.3rem;">
-                   ${b.payment_status.toUpperCase()}
-                 </span>
-               </div>
+          <div class="payment-summary-panel">
+            <h4>Payment Summary</h4>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+              <div>
+                <div class="text-muted" style="font-size:0.85rem;">Total Amount</div>
+                <div style="font-size:1.5rem;font-weight:700;color:var(--color-primary-dark);">₱${Number(b.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="text-muted" style="font-size:0.85rem;">Payment Status</div>
+                <span class="status-badge ${payClass}" style="margin-top:0.35rem;display:inline-block;">${escHtml(String(b.payment_status || '').toUpperCase())}</span>
+              </div>
             </div>
             ${isPending ? `
-              <div style="margin-top: 1.5rem; padding: 1rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; font-size: 0.85rem; color: #92400e; display: flex; gap: 0.8rem;">
-                <i data-lucide="clock" style="width: 18px; flex-shrink: 0;"></i>
+              <div class="payment-alert">
+                <i data-lucide="clock" style="width:18px;flex-shrink:0;"></i>
                 <div>
-                  <strong>Action Required:</strong> Please complete your payment before it expires at <strong>${new Date(b.expires_at).toLocaleTimeString()}</strong>.
+                  <strong>Action Required:</strong> ${expiresLine}
                 </div>
               </div>
             ` : ''}
           </div>
 
-          <div style="display: flex; gap: 1rem; justify-content: center;">
+          <div class="booking-actions-row">
             ${isPending ? `
-              <button id="payNowBtn" class="btn btn-primary" style="padding: 0.8rem 2rem; display: flex; align-items: center; gap: 0.5rem;">
+              <button type="button" id="payNowBtn" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:0.5rem;">
                 <i data-lucide="credit-card"></i> Pay Now via GCash
               </button>
             ` : ''}
             ${b.payment_status === 'paid' ? `
-              <a href="/view-ticket.html?id=${b.id}&facility=${encodeURIComponent(b.facility_name)}&date=${encodeURIComponent(new Date(b.date).toLocaleDateString())}&time=${encodeURIComponent(b.start_time.substring(0,5) + ' - ' + b.end_time.substring(0,5))}" class="btn btn-primary" style="padding: 0.8rem 2rem; display: flex; align-items: center; gap: 0.5rem;">
+              <a href="/view-ticket.html?id=${encodeURIComponent(b.id)}&facility=${encodeURIComponent(b.facility_name)}&date=${encodeURIComponent(new Date(b.date).toLocaleDateString())}&time=${encodeURIComponent(timeStart + ' - ' + timeEnd)}" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:0.5rem;">
                 <i data-lucide="qr-code"></i> View Digital Ticket
               </a>
             ` : ''}
             ${b.status === 'pending' || b.status === 'approved' ? `
-              <button id="cancelBookingBtn" onclick="cancelBooking(${b.id})" class="btn btn-secondary" style="color: var(--error); border-color: var(--error); padding: 0.8rem 2rem;">Cancel Reservation</button>
+              <button type="button" id="cancelBookingBtn" class="btn btn-secondary" style="color:var(--color-danger);border-color:var(--color-danger);">Cancel Reservation</button>
             ` : ''}
           </div>
         </div>
       `;
       lucide.createIcons();
 
-      if (document.getElementById('payNowBtn')) {
-        document.getElementById('payNowBtn').addEventListener('click', () => initiatePayment(b.id));
-      }
+      document.getElementById('payNowBtn')?.addEventListener('click', () => initiatePayment(b.id));
+      document.getElementById('cancelBookingBtn')?.addEventListener('click', () => cancelBooking(b.id));
     }
 
-    async function initiatePayment(bookingId) {
+    async function initiatePayment(id) {
       const btn = document.getElementById('payNowBtn');
+      if (!btn) return;
       btn.disabled = true;
       btn.textContent = 'Preparing Checkout...';
 
@@ -168,12 +218,12 @@
         const res = await fetch('/api/payments/create-checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookingId })
+          credentials: 'same-origin',
+          body: JSON.stringify({ bookingId: id })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Payment initiation failed');
 
-        // Redirect to PayMongo Checkout
         window.location.href = data.checkout_url;
       } catch (err) {
         alert('Error: ' + err.message);
@@ -184,13 +234,14 @@
 
     async function cancelBooking(id) {
       if (!confirm('Are you sure you want to cancel this reservation?')) return;
-      
+
       try {
         const res = await fetch(`/api/facilities/bookings/${id}/cancel`, {
-           method: 'PATCH',
-           headers: { 'Content-Type': 'application/json' }
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin'
         });
-        
+
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Failed to cancel booking');
         alert('Reservation cancelled successfully.');
@@ -200,8 +251,11 @@
       }
     }
 
-    // Init
-    loadDetails();
+    (async function init() {
+      if (!await checkAuth()) return;
+      await loadDetails();
+    })();
+    lucide.createIcons();
   </script>
 </body>
 </html>

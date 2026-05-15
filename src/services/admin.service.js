@@ -125,6 +125,33 @@ async function deleteFacility(id) {
   return result.affectedRows > 0;
 }
 
+async function listBookings() {
+  const [rows] = await pool.query(`
+    SELECT
+      b.id,
+      b.facility_id,
+      b.user_id,
+      b.date,
+      b.start_time,
+      b.end_time,
+      b.status,
+      COALESCE(b.quantity, 1) AS quantity,
+      COALESCE(b.guest_count, 1) AS guest_count,
+      COALESCE(b.total_amount, 0) AS total_amount,
+      COALESCE(b.payment_status, 'pending') AS payment_status,
+      b.created_at,
+      u.name AS user_name,
+      u.email AS user_email,
+      f.name AS facility_name
+    FROM bookings b
+    INNER JOIN users u ON u.id = b.user_id
+    INNER JOIN facilities f ON f.id = b.facility_id
+    ORDER BY b.date DESC, b.created_at DESC
+    LIMIT 400
+  `);
+  return rows;
+}
+
 module.exports = {
   getDashboardSummary,
   getRevenueChart,
@@ -133,5 +160,6 @@ module.exports = {
   getAllFacilitiesAdmin,
   createFacility,
   updateFacility,
-  deleteFacility
+  deleteFacility,
+  listBookings,
 };

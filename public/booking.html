@@ -17,100 +17,92 @@
     <nav>
       <a href="/facilities.html">Facilities</a>
       <a href="/my-bookings.html">My Bookings</a>
-      <a href="#" id="navUser" style="opacity:.7; cursor:default;"></a>
-      <button id="navLogout" class="btn btn-secondary" style="padding: 0.4rem 1rem; margin-left: 1rem;">Logout</button>
+      <a href="#" id="navUser" class="text-muted" style="opacity:0.85;cursor:default;max-width:180px;overflow:hidden;text-overflow:ellipsis;"></a>
+      <button type="button" id="navLogout" class="btn btn-secondary btn-sm">Logout</button>
     </nav>
   </header>
 
   <main class="page-content">
-    <div class="container" style="max-width: 900px;">
-      <a href="/facilities.html" style="display: flex; align-items: center; gap: 0.5rem; color: #64748b; margin-bottom: 2rem; font-size: 0.9rem;">
-        <i data-lucide="arrow-left" style="width: 16px;"></i> Back to Facilities
+    <div class="container narrow-container">
+      <a href="/facilities.html" class="link-back">
+        <i data-lucide="arrow-left" style="width: 16px;" aria-hidden="true"></i> Back to Facilities
       </a>
 
-      <div id="bookingContent" style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 2rem; align-items: flex-start;">
-        <!-- Left: Facility Info & Form -->
-        <div class="booking-main" style="background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-          <div id="facilityHeader" style="margin-bottom: 2rem;">
-            <div class="skeleton" style="height: 30px; width: 60%; margin-bottom: 1rem;"></div>
-            <div class="skeleton" style="height: 100px; width: 100%;"></div>
+      <div id="bookingContent" class="booking-layout">
+        <div class="booking-main">
+          <div id="facilityHeader" style="margin-bottom: 1.5rem;">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-image" style="height:100px;border-radius:10px;margin-top:1rem;"></div>
           </div>
 
           <form id="bookingForm" style="display: none;">
             <div class="form-group">
-              <label for="bookDate"><i data-lucide="calendar" style="width:14px; margin-right:5px;"></i> Reservation Date</label>
-              <input type="date" id="bookDate" required>
+              <label for="bookDate"><i data-lucide="calendar" style="width:14px;margin-right:5px;" aria-hidden="true"></i> Reservation date</label>
+              <input class="form-control" type="date" id="bookDate" required>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-grid">
               <div class="form-group">
-                <label for="startTime"><i data-lucide="clock" style="width:14px; margin-right:5px;"></i> Start Time</label>
-                <input type="time" id="startTime" required>
+                <label for="startTime"><i data-lucide="clock" style="width:14px;margin-right:5px;" aria-hidden="true"></i> Start time</label>
+                <input class="form-control" type="time" id="startTime" required>
               </div>
               <div class="form-group">
-                <label for="endTime"><i data-lucide="clock" style="width:14px; margin-right:5px;"></i> End Time</label>
-                <input type="time" id="endTime" required>
+                <label for="endTime"><i data-lucide="clock" style="width:14px;margin-right:5px;" aria-hidden="true"></i> End time</label>
+                <input class="form-control" type="time" id="endTime" required>
               </div>
             </div>
 
             <div id="bookingTypeGroup" class="form-group" style="display: none;">
-              <label><i data-lucide="sun-moon" style="width:14px; margin-right:5px;"></i> Booking Type</label>
-              <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-                <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
-                  <input type="radio" name="bookingType" value="DAY" checked> Day
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
-                  <input type="radio" name="bookingType" value="NIGHT"> Night
-                </label>
+              <label><i data-lucide="sun-moon" style="width:14px;margin-right:5px;" aria-hidden="true"></i> Booking type</label>
+              <div class="checkbox-row" style="margin-top:0.35rem;">
+                <label><input type="radio" name="bookingType" value="DAY" checked> Day</label>
+                <label><input type="radio" name="bookingType" value="NIGHT"> Night</label>
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-grid">
               <div class="form-group">
-                <label for="quantity"><i data-lucide="hash" style="width:14px; margin-right:5px;"></i> Quantity</label>
-                <input type="number" id="quantity" value="1" min="1" required>
+                <label for="quantity"><i data-lucide="hash" style="width:14px;margin-right:5px;" aria-hidden="true"></i> Quantity</label>
+                <input class="form-control" type="number" id="quantity" value="1" min="1" required>
               </div>
               <div class="form-group">
-                <label for="guestCount"><i data-lucide="users" style="width:14px; margin-right:5px;"></i> Guest Count</label>
-                <input type="number" id="guestCount" value="1" min="1" required>
+                <label for="guestCount"><i data-lucide="users" style="width:14px;margin-right:5px;" aria-hidden="true"></i> Guest count</label>
+                <input class="form-control" type="number" id="guestCount" value="1" min="1" required>
               </div>
             </div>
 
             <div class="form-group">
-              <label for="notes"><i data-lucide="message-square" style="width:14px; margin-right:5px;"></i> Notes / Special Requests</label>
-              <textarea id="notes" rows="3" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 8px; font-family: inherit;"></textarea>
+              <label for="notes"><i data-lucide="message-square" style="width:14px;margin-right:5px;" aria-hidden="true"></i> Notes / special requests</label>
+              <textarea class="form-textarea" id="notes" rows="3"></textarea>
             </div>
 
-            <div id="availabilityStatus" style="margin: 1.5rem 0; padding: 1rem; border-radius: 8px; display: none;">
-              <!-- Availability message -->
-            </div>
+            <div id="availabilityStatus" role="status" aria-live="polite" style="display: none;"></div>
           </form>
         </div>
 
-        <!-- Right: Summary & Checkout -->
-        <aside class="booking-summary" style="background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 100px;">
-          <h3 style="margin-bottom: 1.5rem;">Booking Summary</h3>
+        <aside class="booking-summary" aria-label="Booking summary">
+          <h3 class="page-title" style="font-size:1.15rem;margin-bottom:1rem;">Booking summary</h3>
           <div id="summaryDetails">
-             <p style="color: #777; font-size: 0.9rem;">Fill in the details to see the total amount.</p>
+             <p class="text-muted">Fill in the details to see the total amount.</p>
           </div>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 1.5rem 0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <span style="font-weight: 600;">Total Amount</span>
-            <span id="totalAmount" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">₱0.00</span>
+          <hr class="summary-divider">
+          <div class="summary-total-row">
+            <span>Total amount</span>
+            <span id="totalAmount">₱0.00</span>
           </div>
-          <button id="submitBooking" class="btn btn-primary btn-block btn-large" disabled>Confirm Reservation</button>
-          <p style="margin-top: 1rem; font-size: 0.75rem; color: #777; text-align: center;">You will have 15 minutes to complete the payment after confirmation.</p>
+          <button type="button" id="submitBooking" class="btn btn-primary btn-block btn-large" disabled>Confirm reservation</button>
+          <p class="input-hint" style="text-align:center;margin-top:1rem;">You will have 15 minutes to complete payment after confirmation.</p>
         </aside>
       </div>
     </div>
   </main>
 
-  <div id="errorOverlay" style="display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 1000; align-items: center; justify-content: center; text-align: center;">
-    <div style="max-width: 400px; padding: 2rem;">
-      <i data-lucide="alert-triangle" style="width: 60px; height: 60px; color: var(--error); margin-bottom: 1.5rem;"></i>
-      <h2 id="errorTitle">Oops!</h2>
-      <p id="errorMsg" style="margin: 1rem 0 2rem; color: #64748b;"></p>
-      <a href="/facilities.html" class="btn btn-primary">Back to Facilities</a>
+  <div id="errorOverlay" class="error-overlay" role="alertdialog" aria-modal="true" aria-labelledby="errorTitle">
+    <div class="error-overlay-inner">
+      <i data-lucide="alert-triangle" style="width: 52px; height: 52px; color: var(--color-danger); margin-bottom: 1rem;" aria-hidden="true"></i>
+      <h2 id="errorTitle" class="page-title" style="font-size:1.35rem;">Something went wrong</h2>
+      <p id="errorMsg" class="text-muted" style="margin:1rem 0 1.5rem;"></p>
+      <a href="/facilities.html" class="btn btn-primary">Back to facilities</a>
     </div>
   </div>
 

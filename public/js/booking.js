@@ -189,7 +189,7 @@ function resetTotal() {
 }
 
 function showError(title, msg) {
-  document.getElementById('errorOverlay').style.display = 'flex';
+  document.getElementById('errorOverlay').classList.add('open');
   document.getElementById('errorTitle').textContent = title;
   document.getElementById('errorMsg').textContent = msg;
 }

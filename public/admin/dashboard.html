@@ -12,49 +12,60 @@
 </head>
 <body class="admin-body">
 
+  <header class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Key metrics for Mamagan bookings and revenue.</p>
+  </header>
+
   <div class="dashboard-stats-grid" id="dashboardStats">
-    <!-- Stat cards with skeletons -->
     <div class="stat-card">
-      <div class="skeleton" style="height: 12px; width: 50%; margin-bottom: 0.5rem;"></div>
-      <div class="skeleton" style="height: 24px; width: 70%;"></div>
+      <div class="skeleton skeleton-line" style="width:55%;height:12px;"></div>
+      <div class="skeleton skeleton-line" style="width:70%;height:22px;margin-top:10px;"></div>
     </div>
     <div class="stat-card">
-      <div class="skeleton" style="height: 12px; width: 50%; margin-bottom: 0.5rem;"></div>
-      <div class="skeleton" style="height: 24px; width: 70%;"></div>
+      <div class="skeleton skeleton-line" style="width:55%;height:12px;"></div>
+      <div class="skeleton skeleton-line" style="width:70%;height:22px;margin-top:10px;"></div>
     </div>
     <div class="stat-card">
-      <div class="skeleton" style="height: 12px; width: 50%; margin-bottom: 0.5rem;"></div>
-      <div class="skeleton" style="height: 24px; width: 70%;"></div>
+      <div class="skeleton skeleton-line" style="width:55%;height:12px;"></div>
+      <div class="skeleton skeleton-line" style="width:70%;height:22px;margin-top:10px;"></div>
     </div>
     <div class="stat-card">
-      <div class="skeleton" style="height: 12px; width: 50%; margin-bottom: 0.5rem;"></div>
-      <div class="skeleton" style="height: 24px; width: 70%;"></div>
+      <div class="skeleton skeleton-line" style="width:55%;height:12px;"></div>
+      <div class="skeleton skeleton-line" style="width:70%;height:22px;margin-top:10px;"></div>
     </div>
   </div>
 
-  <div class="charts-container" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-top: 2rem;">
-    <div class="chart-card" style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-       <h3 style="margin-bottom: 1.5rem;">Monthly Revenue</h3>
-       <canvas id="revenueChart" height="250"></canvas>
+  <div class="charts-grid cols-2-1">
+    <div class="chart-card">
+      <h3>Monthly Revenue</h3>
+      <div class="chart-canvas-wrap">
+        <canvas id="revenueChart" height="240"></canvas>
+      </div>
     </div>
-    <div class="chart-card" style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-       <h3 style="margin-bottom: 1.5rem;">Booking Status</h3>
-       <canvas id="statusChart" height="250"></canvas>
-    </div>
-  </div>
-
-  <div class="charts-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem; margin-bottom: 3rem;">
-    <div class="chart-card" style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-       <h3 style="margin-bottom: 1.5rem;">Facility Occupancy</h3>
-       <canvas id="occupancyChart" height="250"></canvas>
-    </div>
-    <div class="chart-card" style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-       <h3 style="margin-bottom: 1.5rem;">Category Usage</h3>
-       <canvas id="categoryChart" height="250"></canvas>
+    <div class="chart-card">
+      <h3>Booking Status</h3>
+      <div class="chart-canvas-wrap">
+        <canvas id="statusChart" height="240"></canvas>
+      </div>
     </div>
   </div>
 
-  <!-- Reusable layout and dashboard logic -->
+  <div class="charts-grid cols-2">
+    <div class="chart-card">
+      <h3>Facility Occupancy</h3>
+      <div class="chart-canvas-wrap">
+        <canvas id="occupancyChart" height="240"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Category Usage</h3>
+      <div class="chart-canvas-wrap">
+        <canvas id="categoryChart" height="240"></canvas>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/skeleton.js"></script>
   <script src="/assets/js/admin-layout.js"></script>
   <script src="/admin/js/dashboard.js"></script>

@@ -73,7 +73,7 @@
     form.reset();
     document.getElementById('facilityId').value = '';
     document.getElementById('modalTitle').textContent = 'Add New Facility';
-    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('imagePreview').classList.remove('is-visible');
     modal.classList.add('open');
   });
 
@@ -111,7 +111,7 @@
 
     if (f.image_url) {
       document.getElementById('imagePreview').src = f.image_url;
-      document.getElementById('imagePreview').style.display = 'block';
+      document.getElementById('imagePreview').classList.add('is-visible');
     }
 
     modal.classList.add('open');
@@ -187,7 +187,7 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         document.getElementById('imagePreview').src = e.target.result;
-        document.getElementById('imagePreview').style.display = 'block';
+        document.getElementById('imagePreview').classList.add('is-visible');
       };
       reader.readAsDataURL(file);
     }

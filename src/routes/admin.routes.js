@@ -38,6 +38,8 @@ router.get('/dashboard/revenue-chart', adminController.getRevenueChart);
 router.get('/dashboard/booking-status-chart', adminController.getBookingStatusChart);
 router.get('/dashboard/occupancy-chart', adminController.getOccupancyChart);
 
+router.get('/bookings', adminController.listBookings);
+
 // Facilities CRUD
 router.get('/facilities', adminController.getAllFacilities);
 router.get('/facilities/:id', adminController.getFacilityById);

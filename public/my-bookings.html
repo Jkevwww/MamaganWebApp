@@ -17,33 +17,33 @@
     <nav>
       <a href="/facilities.html">Facilities</a>
       <a href="/my-bookings.html">My Bookings</a>
-      <a href="#" id="navUser" style="opacity:.7; cursor:default;"></a>
-      <button id="navLogout" class="btn btn-secondary" style="padding: 0.4rem 1rem; margin-left: 1rem;">Logout</button>
+      <a href="#" id="navUser" class="text-muted" style="opacity:0.85;cursor:default;max-width:180px;overflow:hidden;text-overflow:ellipsis;"></a>
+      <button type="button" id="navLogout" class="btn btn-secondary btn-sm">Logout</button>
     </nav>
   </header>
 
   <main class="page-content">
     <div class="container">
-      <header style="margin-bottom: 2rem;">
-        <h2>My Bookings</h2>
-        <p style="color: #777;">View and manage your beach resort reservations.</p>
+      <header class="page-header">
+        <h1 class="page-title">My bookings</h1>
+        <p class="page-subtitle">View payment status, visit times, and tickets for your Mamagan reservations.</p>
       </header>
 
-      <div class="table-card" style="background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-        <table id="myBookingsTable">
-          <thead>
-            <tr>
-              <th>Facility</th>
-              <th>Date</th>
-              <th>Time</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="myBookingsTbody">
-            <!-- Skeletons will be rendered here -->
-          </tbody>
-        </table>
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="data-table" id="myBookingsTable">
+            <thead>
+              <tr>
+                <th>Facility</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="myBookingsTbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>

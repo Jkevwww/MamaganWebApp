@@ -16,101 +16,137 @@
     </div>
     <nav>
       <a href="/facilities.html">Facilities</a>
-      <a href="/my-bookings.html" class="auth-only">My Bookings</a>
-      <a href="#" id="navUser" style="opacity:.7; cursor:default;"></a>
-      <button id="navLogout" class="btn btn-secondary" style="padding: 0.4rem 1rem; margin-left: 1rem; display:none;">Logout</button>
-      <a href="/login.html" class="btn btn-primary guest-only" style="padding: 0.4rem 1rem;">Login</a>
+      <a href="/my-bookings.html" class="auth-only" style="display:none;">My Bookings</a>
+      <a href="#" id="navUser" class="text-muted" style="opacity:0.85;cursor:default;max-width:180px;overflow:hidden;text-overflow:ellipsis;"></a>
+      <button type="button" id="navLogout" class="btn btn-secondary btn-sm" style="display:none;">Logout</button>
+      <a href="/login.html" class="btn btn-primary btn-sm guest-only">Login</a>
     </nav>
   </header>
 
   <main class="page-content">
-    <div class="container" style="max-width: 1000px;">
-      <a href="/facilities.html" style="display: flex; align-items: center; gap: 0.5rem; color: #64748b; margin-bottom: 2rem; font-size: 0.9rem;">
-        <i data-lucide="arrow-left" style="width: 16px;"></i> Back to Facilities
+    <div class="container narrow-container">
+      <a href="/facilities.html" class="link-back">
+        <i data-lucide="arrow-left" style="width: 16px;" aria-hidden="true"></i> Back to Facilities
       </a>
 
-      <div id="facilityDetails" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: flex-start;">
-         <!-- Content loaded by JS -->
-         <div class="skeleton" style="height: 400px; width: 100%; border-radius: 12px;"></div>
-         <div>
-           <div class="skeleton" style="height: 40px; width: 80%; margin-bottom: 1rem;"></div>
-           <div class="skeleton" style="height: 100px; width: 100%;"></div>
-         </div>
+      <div id="facilityDetails" class="facility-detail-layout">
+        <div class="facility-detail-media">
+          <div class="skeleton skeleton-image" style="height:320px;border-radius:var(--radius-lg);"></div>
+        </div>
+        <div>
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton skeleton-text" style="width:90%;"></div>
+          <div class="skeleton skeleton-text" style="width:72%;"></div>
+        </div>
       </div>
     </div>
   </main>
 
   <script>
+    function escHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escAttr(str) {
+      return String(str ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    }
+
     const facilityId = new URLSearchParams(window.location.search).get('id');
 
     async function checkAuth() {
       try {
-        const res = await fetch('/api/auth/me');
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
         if (res.ok) {
           const user = await res.json();
-          document.getElementById('navUser').textContent = user.name;
-          document.querySelectorAll('.auth-only').forEach(el => el.style.display = 'inline-block');
-          document.querySelectorAll('.guest-only').forEach(el => el.style.display = 'none');
-          document.getElementById('navLogout').style.display = 'inline-block';
+          const navUser = document.getElementById('navUser');
+          if (navUser) navUser.textContent = user.name || '';
+          document.querySelectorAll('.auth-only').forEach(el => { el.style.display = ''; });
+          document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
+          const logoutBtn = document.getElementById('navLogout');
+          if (logoutBtn) logoutBtn.style.display = 'inline-block';
         }
       } catch (_) {}
+    }
+
+    if (document.getElementById('navLogout')) {
+      document.getElementById('navLogout').addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+        } catch (_) {}
+        localStorage.clear();
+        window.location.replace('/');
+      });
     }
 
     async function loadFacility() {
       if (!facilityId) { window.location.replace('/facilities.html'); return; }
 
       try {
-        const res = await fetch(`/api/facilities/${facilityId}`);
+        const res = await fetch(`/api/facilities/${facilityId}`, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Facility not found');
         const f = await res.json();
-        
+
         renderFacility(f);
       } catch (err) {
-        document.getElementById('facilityDetails').innerHTML = `<p style="color:var(--error);">${err.message}</p>`;
+        document.getElementById('facilityDetails').innerHTML =
+          `<p style="grid-column:1/-1;color:var(--color-danger);">${escHtml(err.message)}</p>`;
       }
     }
 
     function renderFacility(f) {
       const container = document.getElementById('facilityDetails');
+      const imgSrc = f.image_url || 'https://placehold.co/600x400';
+      const rentalLabel = f.rental_type === 'DAILY' ? 'day' : f.rental_type === 'HOURLY' ? 'hour' : 'session';
+      const priceRange = f.price_max > f.price_min
+        ? `₱${Number(f.price_min).toLocaleString()} - ₱${Number(f.price_max).toLocaleString()}`
+        : `₱${Number(f.price_min).toLocaleString()}`;
+
       container.innerHTML = `
-        <div class="facility-image">
-          <img src="${f.image_url || 'https://placehold.co/600x400'}" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.1);">
+        <div class="facility-detail-media">
+          <img src="${escAttr(imgSrc)}" alt="${escAttr(f.name)}">
         </div>
         <div class="facility-info">
-          <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem; color: var(--primary);">${f.name}</h1>
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <span class="badge" style="background:#f1f5f9; color:#64748b;">${f.size}</span>
-            <span class="badge" style="background:#fff7ed; color:#9a3412;">${f.capacity_min}-${f.capacity_max} pax</span>
-            <span class="badge" style="background:#f0f9ff; color:#0369a1;">${f.category}</span>
+          <h1 class="facility-detail-title">${escHtml(f.name)}</h1>
+          <div class="facility-meta-row">
+            <span class="badge" style="background:#f1f5f9;color:#64748b;">${escHtml(f.size)}</span>
+            <span class="badge" style="background:#fff7ed;color:#9a3412;">${f.capacity_min}-${f.capacity_max} pax</span>
+            <span class="badge" style="background:#f0f9ff;color:#0369a1;">${escHtml(f.category)}</span>
           </div>
-          
-          <p style="font-size: 1.1rem; line-height: 1.6; color: #475569; margin-bottom: 2rem;">${f.description}</p>
-          
-          <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-            <div style="font-size: 0.9rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">Pricing</div>
-            <div style="font-size: 1.8rem; font-weight: 700; color: var(--primary);">
-              ₱${Number(f.price_min).toLocaleString()} ${f.price_max > f.price_min ? '- ₱' + Number(f.price_max).toLocaleString() : ''}
-              <small style="font-size: 1rem; color: #64748b; font-weight: 400;"> / ${f.rental_type === 'DAILY' ? 'day' : f.rental_type === 'HOURLY' ? 'hour' : 'session'}</small>
+
+          <p class="facility-description">${escHtml(f.description)}</p>
+
+          <div class="pricing-panel">
+            <div class="pricing-panel-label">Pricing</div>
+            <div class="pricing-panel-value">
+              ${priceRange}
+              <small> / ${rentalLabel}</small>
             </div>
-            ${f.category === 'Room' ? '<p style="font-size: 0.85rem; color: #64748b; margin-top: 0.5rem;">* Night surcharge applies for overnight stays.</p>' : ''}
+            ${f.category === 'Room' ? '<p style="font-size: 0.85rem; color: var(--color-muted); margin-top: 0.5rem;">* Night surcharge applies for overnight stays.</p>' : ''}
           </div>
 
           ${f.is_bookable ? `
-            <a href="/booking.html?id=${f.id}" class="btn btn-primary btn-block btn-large">Book this Facility</a>
+            <a href="/booking.html?id=${encodeURIComponent(f.id)}" class="btn btn-primary btn-block btn-large">Book this Facility</a>
           ` : `
-            <div style="padding: 1.5rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; color: #991b1b; text-align: center;">
-              <i data-lucide="info" style="margin-bottom: 0.5rem;"></i>
+            <div class="unavailable-panel">
+              <i data-lucide="info" style="width:22px;height:22px;margin:0 auto 0.5rem;display:block;"></i>
               <p><strong>Currently Unavailable</strong></p>
-              <p style="font-size: 0.9rem; opacity: 0.8;">${f.unavailable_reason || 'This facility is not open for reservations at the moment.'}</p>
+              <p style="font-size: 0.9rem; opacity: 0.9; margin-top: 0.35rem;">${escHtml(f.unavailable_reason || 'This facility is not open for reservations at the moment.')}</p>
             </div>
           `}
-          
-          <div style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2rem;">
-            <h4 style="margin-bottom: 1rem;">Facility Rules</h4>
-            <ul style="list-style: none; color: #64748b; font-size: 0.9rem; line-height: 1.8;">
-              <li><i data-lucide="check-circle" style="width:14px; color:var(--primary); margin-right:8px;"></i> Maximum capacity of ${f.capacity_max} people must be strictly followed.</li>
-              <li><i data-lucide="check-circle" style="width:14px; color:var(--primary); margin-right:8px;"></i> No loud music after 10:00 PM.</li>
-              <li><i data-lucide="check-circle" style="width:14px; color:var(--primary); margin-right:8px;"></i> Please keep the area clean.</li>
+
+          <div class="facility-rules">
+            <h4>Facility Rules</h4>
+            <ul>
+              <li><i data-lucide="check-circle" style="width:14px;color:var(--color-primary);flex-shrink:0;"></i> Maximum capacity of ${f.capacity_max} people must be strictly followed.</li>
+              <li><i data-lucide="check-circle" style="width:14px;color:var(--color-primary);flex-shrink:0;"></i> No loud music after 10:00 PM.</li>
+              <li><i data-lucide="check-circle" style="width:14px;color:var(--color-primary);flex-shrink:0;"></i> Please keep the area clean.</li>
             </ul>
           </div>
         </div>
@@ -120,6 +156,7 @@
 
     checkAuth();
     loadFacility();
+    lucide.createIcons();
   </script>
 </body>
 </html>
