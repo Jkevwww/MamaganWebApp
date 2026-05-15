@@ -7,7 +7,7 @@ const FACILITIES = [
   // COTTAGES
   {
     name: 'Small Cottage',
-    category: 'Cottage',
+    category: 'COTTAGE',
     size: 'Small',
     description: 'Perfect for small families or groups of friends.',
     units: 5,
@@ -22,7 +22,7 @@ const FACILITIES = [
   },
   {
     name: 'Medium Cottage',
-    category: 'Cottage',
+    category: 'COTTAGE',
     size: 'Medium',
     description: 'A medium-sized cottage for larger groups.',
     units: 0,
@@ -38,7 +38,7 @@ const FACILITIES = [
   },
   {
     name: 'Large Cottage',
-    category: 'Cottage',
+    category: 'COTTAGE',
     size: 'Large',
     description: 'Spacious cottage for big families and gatherings.',
     units: 4,
@@ -53,7 +53,7 @@ const FACILITIES = [
   },
   {
     name: 'Extra Large Cottage',
-    category: 'Cottage',
+    category: 'COTTAGE',
     size: 'Extra Large',
     description: 'Our biggest cottage for very large groups.',
     units: 1,
@@ -69,7 +69,7 @@ const FACILITIES = [
   // ROOMS / CABANAS
   {
     name: 'Small Room/Cabana',
-    category: 'Room',
+    category: 'CABANA',
     size: 'Small',
     description: 'Cozy room for a small group or couple.',
     units: 2,
@@ -84,7 +84,7 @@ const FACILITIES = [
   },
   {
     name: 'Medium Room/Cabana',
-    category: 'Room',
+    category: 'CABANA',
     size: 'Medium',
     description: 'Comfortable room for families.',
     units: 4,
@@ -99,7 +99,7 @@ const FACILITIES = [
   },
   {
     name: 'Large Room/Cabana',
-    category: 'Room',
+    category: 'CABANA',
     size: 'Large',
     description: 'Large room for up to 12 people.',
     units: 1,
@@ -114,7 +114,7 @@ const FACILITIES = [
   },
   {
     name: 'Extra Large Room/Cabana',
-    category: 'Room',
+    category: 'CABANA',
     size: 'Extra Large',
     description: 'Extra large cabana for big groups.',
     units: 1,
@@ -130,7 +130,7 @@ const FACILITIES = [
   // BEACH EQUIPMENT
   {
     name: 'Life Vest',
-    category: 'Equipment',
+    category: 'BEACH_EQUIPMENT',
     size: 'Standard',
     description: 'Essential safety gear for water activities.',
     units: 50,
@@ -145,7 +145,7 @@ const FACILITIES = [
   },
   {
     name: 'Boat',
-    category: 'Equipment',
+    category: 'BEACH_EQUIPMENT',
     size: 'Standard',
     description: 'Enjoy a boat ride along the coast.',
     units: 5,
@@ -160,7 +160,7 @@ const FACILITIES = [
   },
   {
     name: 'Stand Paddle Boat',
-    category: 'Equipment',
+    category: 'BEACH_EQUIPMENT',
     size: 'Standard',
     description: 'Fun and active way to explore the water.',
     units: 10,
@@ -190,7 +190,7 @@ async function seed() {
   let added = 0;
   for (const f of FACILITIES) {
     await conn.query(
-      `INSERT INTO facilities (name, category, size, description, units, price_min, price_max, capacity_min, capacity_max, is_available, is_bookable, unavailable_reason, rental_type, image_url, price_per_hour)
+      `INSERT INTO facilities (name, category, size, description, inventory_count, price_min, price_max, capacity_min, capacity_max, is_available, is_bookable, unavailable_reason, rental_type, image_url, price_per_hour)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [f.name, f.category, f.size, f.description, f.units, f.price_min, f.price_max, f.capacity_min, f.capacity_max, f.is_available, f.is_bookable, f.unavailable_reason || null, f.rental_type, f.image_url, f.price_min]
     );
