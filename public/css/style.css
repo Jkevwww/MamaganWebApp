@@ -52,7 +52,7 @@
 /* ─── Reset & base ─────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; -moz-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 body {
   font-family: var(--font-body);
@@ -465,7 +465,6 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
 .auth-page-bg {
   min-height: 100vh;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-navy) 100%);
-}
   display: flex;
   align-items: center;
   justify-content: center;
