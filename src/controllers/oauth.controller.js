@@ -16,6 +16,31 @@ function metaFromReq(req) {
   };
 }
 
+function hasPassportStrategy(name) {
+  if (typeof passport._strategy === 'function' && passport._strategy(name)) {
+    return true;
+  }
+  return Boolean(passport._strategies && passport._strategies[name]);
+}
+
+function isGoogleOAuthConfigured() {
+  return Boolean(
+      process.env.GOOGLE_CLIENT_ID &&
+      process.env.GOOGLE_CLIENT_SECRET &&
+      process.env.GOOGLE_CALLBACK_URL &&
+      hasPassportStrategy('google')
+  );
+}
+
+function isGithubOAuthConfigured() {
+  return Boolean(
+    process.env.GITHUB_CLIENT_ID &&
+      process.env.GITHUB_CLIENT_SECRET &&
+      process.env.GITHUB_CALLBACK_URL &&
+      hasPassportStrategy('github')
+  );
+}
+
 async function finishOAuthSuccess(req, res, provider, authPayload) {
   const { ipAddress, userAgent } = metaFromReq(req);
   const successAction = provider === 'GOOGLE' ? 'GOOGLE_LOGIN_SUCCESS' : 'GITHUB_LOGIN_SUCCESS';
@@ -73,7 +98,10 @@ async function finishOAuthFailure(req, res, provider, err) {
 }
 
 function googleCallback(req, res, next) {
-  passport.authenticate('google-oauth20', { session: true }, (err, authPayload) => {
+  if (!isGoogleOAuthConfigured()) {
+    return res.redirect(oauthFailureRedirect());
+  }
+  passport.authenticate('google', { session: true }, (err, authPayload) => {
     void (async () => {
       try {
         if (err || !authPayload?.token) {
@@ -89,6 +117,9 @@ function googleCallback(req, res, next) {
 }
 
 function githubCallback(req, res, next) {
+  if (!isGithubOAuthConfigured()) {
+    return res.redirect(oauthFailureRedirect());
+  }
   passport.authenticate('github', { session: true }, (err, authPayload) => {
     void (async () => {
       try {
@@ -105,17 +136,17 @@ function githubCallback(req, res, next) {
 }
 
 function googleStart(req, res, next) {
-  if (!process.env.GOOGLE_CLIENT_ID) {
+  if (!isGoogleOAuthConfigured()) {
     return res.redirect(oauthFailureRedirect());
   }
-  return passport.authenticate('google-oauth20', {
+  return passport.authenticate('google', {
     scope: ['email', 'profile'],
     session: true,
   })(req, res, next);
 }
 
 function githubStart(req, res, next) {
-  if (!process.env.GITHUB_CLIENT_ID) {
+  if (!isGithubOAuthConfigured()) {
     return res.redirect(oauthFailureRedirect());
   }
   return passport.authenticate('github', {
