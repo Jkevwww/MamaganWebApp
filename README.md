@@ -108,7 +108,7 @@ Routes:
 2. **Create credentials** → **OAuth client ID** → Application type: **Web application**.
 3. Under **Authorized redirect URIs**, add:
    - Local: `http://localhost:10000/api/auth/google/callback`
-   - Render: `https://YOUR-RENDER-APP.onrender.com/api/auth/google/callback`
+   - Render: `https://mamagan-booking-system.onrender.com/api/auth/google/callback`
 4. Copy **Client ID** and **Client secret** into environment variables:
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
@@ -133,7 +133,7 @@ Routes:
 - **Homepage URL:** `http://localhost:10000` (local) or your Render URL in production.
 - **Authorization callback URL** must match how GitHub routes callbacks:
   - Local: `http://localhost:10000/api/auth/github/callback`
-  - Production: `https://YOUR-RENDER-APP.onrender.com/api/auth/github/callback`
+  - Production: `https://mamagan-booking-system.onrender.com/api/auth/github/callback`
 
 Set:
 
@@ -145,8 +145,8 @@ Set:
 
 **Email rules**
 
-- Primary source: verified emails from the GitHub profile when present.
-- If missing, the server calls `https://api.github.com/user/emails` with the short-lived OAuth access token and picks a **verified** email (prefer primary). Tokens are **not** stored in the database.
+- Primary source: a verified **primary** email from the GitHub profile when present.
+- If missing, the server calls `https://api.github.com/user/emails` with the short-lived OAuth access token and uses only a verified **primary** email. Tokens are **not** stored in the database.
 
 ### Admin OAuth
 
@@ -200,12 +200,22 @@ Set `MYSQL_SSL_CA` to the CA PEM. You may use literal `\n` in a single-line env 
 `render.yaml` is included as a template. Set:
 
 - `NODE_ENV=production`, `PORT=10000`
-- `SERVER_URL` and `CLIENT_URL` to `https://YOUR-RENDER-APP.onrender.com`
-- `GOOGLE_CALLBACK_URL` / `GITHUB_CALLBACK_URL` with the same host
+- `SERVER_URL` and `CLIENT_URL` to `https://mamagan-booking-system.onrender.com`
+- `GOOGLE_CALLBACK_URL=https://mamagan-booking-system.onrender.com/api/auth/google/callback`
+- `GITHUB_CALLBACK_URL=https://mamagan-booking-system.onrender.com/api/auth/github/callback`
 - `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_PHONE` for the default admin account
 - All secrets (`JWT_SECRET`, `SESSION_SECRET`, MySQL, OAuth, PayMongo) in the Render dashboard (`sync: false` placeholders in YAML)
 
 Build: `npm install` — Start: `npm start`. Redeploy after changing Render environment variables, then run `npm run db:seed` or `npm run create-admin` from a shell/job if the admin account needs to be created.
+
+### OAuth test checklist
+
+1. Set `JWT_SECRET`, `SESSION_SECRET`, database env vars, and the relevant OAuth client ID/secret/callback URL.
+2. Run `npm install`, `npm run db:migrate`, and `npm run db:seed`.
+3. Start locally with `npm run dev` and open `/login.html`.
+4. Test `/api/auth/google` and `/api/auth/github`; successful guest logins should land on `/facilities.html`.
+5. Link an existing admin email through OAuth; it should preserve the admin role and land on `/admin/dashboard.html`.
+6. Disable a user (`active=0`) and confirm OAuth returns `/login.html?error=account_disabled`.
 
 ---
 

@@ -78,6 +78,7 @@ async function linkOrCreateOAuthUser({
     if (!active) {
       const err = new Error('Account is inactive');
       err.statusCode = 403;
+      err.oauthError = 'account_disabled';
       throw err;
     }
 
@@ -109,6 +110,7 @@ async function linkOrCreateOAuthUser({
     if (!active) {
       const err = new Error('Account is inactive');
       err.statusCode = 403;
+      err.oauthError = 'account_disabled';
       throw err;
     }
 

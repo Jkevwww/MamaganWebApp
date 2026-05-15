@@ -10,15 +10,15 @@
   <link rel="stylesheet" href="/css/google_oauth.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="auth-page-bg">
+<body class="auth-page auth-page-bg">
   <div class="auth-wrapper">
     <div class="auth-card">
       <div class="text-center auth-logo-block">
         <a href="/" aria-label="Mamagan home"><img src="/mamagan-logo.svg" alt="Mamagan Logo" height="50"></a>
       </div>
 
-      <h1>Mamagan Resort Login</h1>
-      <p class="subtitle">Sign in with one account for bookings or staff access.</p>
+      <h1 class="auth-title">Mamagan Resort Login</h1>
+      <p class="auth-subtitle subtitle">Sign in with one account for bookings or staff access.</p>
 
       <div class="alert alert-error" id="alertBox"></div>
 
@@ -29,7 +29,12 @@
         </div>
         <div class="form-group">
           <label for="password"><i class="icon-xs-inline" data-lucide="lock"></i> Password</label>
-          <input type="password" id="password" placeholder="Password" required>
+          <div class="input-wrapper password-field">
+            <input type="password" id="password" placeholder="Password" required>
+            <button class="password-toggle" type="button" data-target="password" aria-label="Show password">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Login</button>
       </form>
@@ -49,13 +54,13 @@
       </div>
 
       <div class="oauth-stack">
-        <a class="btn btn-google btn-block" href="/api/auth/google" id="googleLoginBtn" aria-label="Continue using Google">
+        <a class="btn btn-google btn-block" href="/api/auth/google" id="googleLoginBtn" aria-label="Continue with Google">
           <img class="oauth-provider-icon" src="/assets/images/google.svg" alt="" aria-hidden="true">
-          Continue using Google
+          Continue with Google
         </a>
-        <a class="btn btn-github btn-block" href="/api/auth/github" id="githubLoginBtn" aria-label="Continue using GitHub">
+        <a class="btn btn-github btn-block" href="/api/auth/github" id="githubLoginBtn" aria-label="Continue with GitHub">
           <img class="oauth-provider-icon" src="/assets/images/github.svg" alt="" aria-hidden="true">
-          Continue using GitHub
+          Continue with GitHub
         </a>
       </div>
     </div>
@@ -63,6 +68,7 @@
 
   <script src="/js/auth.js"></script>
   <script>
+    initPasswordToggles();
     lucide.createIcons();
     initLoginForm('loginForm', 'alertBox', 'submitBtn');
   </script>

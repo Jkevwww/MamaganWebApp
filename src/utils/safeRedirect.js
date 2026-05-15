@@ -8,11 +8,21 @@ function safeAppPath(value, fallback) {
   return fallback;
 }
 
-function oauthFailureRedirect() {
-  return safeAppPath(
-    process.env.OAUTH_FAILURE_REDIRECT,
-    '/login.html?error=oauth_failed'
-  );
+function oauthFailureRedirect(errorCode = 'oauth_failed') {
+  const allowedErrors = new Set([
+    'oauth_failed',
+    'email_required',
+    'account_disabled',
+    'unauthorized',
+  ]);
+  const safeError = allowedErrors.has(errorCode) ? errorCode : 'oauth_failed';
+  if (safeError === 'oauth_failed') {
+    return safeAppPath(
+      process.env.OAUTH_FAILURE_REDIRECT,
+      '/login.html?error=oauth_failed'
+    );
+  }
+  return `/login.html?error=${encodeURIComponent(safeError)}`;
 }
 
 function oauthSuccessGuestRedirect() {

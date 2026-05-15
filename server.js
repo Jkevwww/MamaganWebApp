@@ -27,6 +27,17 @@ const { setUpPassport } = require('./src/config/passport');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+function requireEnv(name) {
+  if (!process.env[name]) {
+    throw new Error(`${name} is required. Set ${name} in .env or Render Environment Variables.`);
+  }
+}
+
+requireEnv('JWT_SECRET');
+requireEnv('SESSION_SECRET');
+
+app.set('trust proxy', 1);
+
 const corsOrigins = (process.env.CLIENT_URL || process.env.CORS_ORIGIN || 'http://localhost:10000')
   .split(',')
   .map((s) => s.trim())
@@ -59,7 +70,7 @@ setUpPassport();
 app.use(
   session({
     name: 'oauth_session',
-    secret: process.env.SESSION_SECRET || 'dev_session_secret_change_me',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: new MySQLStore({

@@ -2,28 +2,28 @@
 
 :root {
   /* Brand — beach resort */
-  --color-primary: #0d9488;
-  --color-primary-dark: #0f766e;
+  --color-primary: #0ea5b7;
+  --color-primary-dark: #075985;
   --color-secondary: #e0f2f1;
-  --color-accent: #ea580c;
+  --color-accent: #f97316;
   --color-navy: #0f172a;
-  --color-sand: #d4c4a8;
-  --color-bg: #f0fdfa;
+  --color-sand: #f5e6c8;
+  --color-bg: #f8fafc;
   --color-surface: #ffffff;
-  --color-text: #1e293b;
+  --color-text: #0f172a;
   --color-muted: #64748b;
   --color-border: #e2e8f0;
-  --color-success: #15803d;
-  --color-warning: #b45309;
-  --color-danger: #b91c1c;
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
 
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.1);
+  --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.12);
   --shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.14);
 
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
 
   --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-size-body: 1rem;

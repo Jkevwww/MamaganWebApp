@@ -13,9 +13,9 @@ services:
         value: 10000
 
       - key: SERVER_URL
-        value: https://YOUR-RENDER-APP.onrender.com
+        value: https://mamagan-booking-system.onrender.com
       - key: CLIENT_URL
-        value: https://YOUR-RENDER-APP.onrender.com
+        value: https://mamagan-booking-system.onrender.com
 
       - key: JWT_SECRET
         sync: false
@@ -49,14 +49,14 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
-        value: https://YOUR-RENDER-APP.onrender.com/api/auth/google/callback
+        value: https://mamagan-booking-system.onrender.com/api/auth/google/callback
 
       - key: GITHUB_CLIENT_ID
         sync: false
       - key: GITHUB_CLIENT_SECRET
         sync: false
       - key: GITHUB_CALLBACK_URL
-        value: https://YOUR-RENDER-APP.onrender.com/api/auth/github/callback
+        value: https://mamagan-booking-system.onrender.com/api/auth/github/callback
 
       - key: OAUTH_SUCCESS_GUEST_REDIRECT
         value: /facilities.html

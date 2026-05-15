@@ -84,17 +84,18 @@ async function finishOAuthSuccess(req, res, provider, authPayload) {
 async function finishOAuthFailure(req, res, provider, err) {
   const { ipAddress, userAgent } = metaFromReq(req);
   const failAction = provider === 'GOOGLE' ? 'GOOGLE_LOGIN_FAILED' : 'GITHUB_LOGIN_FAILED';
+  const errorCode = err?.oauthError || (err?.statusCode === 403 ? 'account_disabled' : 'oauth_failed');
   await logSystemAction({
     userId: null,
     action: failAction,
     module: 'AUTH',
     targetType: 'oauth',
     targetId: provider,
-    details: { message: err?.message || String(err || 'failed') },
+    details: { message: err?.message || String(err || 'failed'), error: errorCode },
     ipAddress,
     userAgent,
   });
-  return res.redirect(oauthFailureRedirect());
+  return res.redirect(oauthFailureRedirect(errorCode));
 }
 
 function googleCallback(req, res, next) {

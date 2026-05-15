@@ -14,19 +14,14 @@ async function fetchGithubVerifiedEmail(accessToken) {
     },
   });
   const list = Array.isArray(data) ? data : [];
-  const verified = list.filter((e) => e && e.verified === true);
-  const primary = verified.find((e) => e.primary === true);
-  return primary?.email || verified[0]?.email || null;
+  const primary = list.find((e) => e && e.primary === true && e.verified === true && e.email);
+  return primary?.email || null;
 }
 
 function readVerifiedGithubEmailFromProfile(profile) {
   const emails = profile.emails || [];
-  for (const e of emails) {
-    if (e && e.value && e.verified === true) {
-      return e.value.trim().toLowerCase();
-    }
-  }
-  return null;
+  const primary = emails.find((e) => e && e.value && e.primary === true && e.verified === true);
+  return primary ? primary.value.trim().toLowerCase() : null;
 }
 
 function setUpPassport() {
@@ -51,6 +46,7 @@ function setUpPassport() {
             if (!verifiedEmail) {
               const err = new Error('Google account email is not verified');
               err.statusCode = 400;
+              err.oauthError = 'email_required';
               throw err;
             }
             const email = verifiedEmail.value;
@@ -94,6 +90,7 @@ function setUpPassport() {
             if (!email) {
               const err = new Error('No verified GitHub email available');
               err.statusCode = 400;
+              err.oauthError = 'email_required';
               throw err;
             }
             const displayName =

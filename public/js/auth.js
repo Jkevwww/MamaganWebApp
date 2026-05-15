@@ -81,11 +81,42 @@ function showLoginQueryMessage(alertId) {
       'Sign-in with Google or GitHub did not complete. Please try again or use email and password.',
       'error'
     );
+  } else if (error === 'email_required') {
+    showAlert(alertId, 'Your OAuth account must have a verified primary email address.', 'error');
+  } else if (error === 'account_disabled') {
+    showAlert(alertId, 'This account is disabled. Please contact an administrator.', 'error');
+  } else if (error === 'unauthorized') {
+    showAlert(alertId, 'Please sign in before continuing.', 'error');
   } else if (error === 'inactive') {
     showAlert(alertId, 'This account is inactive. Please contact an administrator.', 'error');
   } else if (error === 'admin_permission') {
     showAlert(alertId, 'You do not have permission to access the admin panel.', 'error');
   }
+}
+
+function initPasswordToggles() {
+  document.querySelectorAll('.password-toggle').forEach((button) => {
+    if (button.dataset.toggleBound === 'true') return;
+    button.dataset.toggleBound = 'true';
+
+    button.addEventListener('click', () => {
+      const inputId = button.dataset.target;
+      const input = inputId ? document.getElementById(inputId) : null;
+      if (!input) return;
+
+      const shouldShow = input.type === 'password';
+      input.type = shouldShow ? 'text' : 'password';
+      button.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
+
+      const iconName = shouldShow ? 'eye-off' : 'eye';
+      if (button.querySelector('[data-lucide]')) {
+        button.innerHTML = `<i data-lucide="${iconName}"></i>`;
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      }
+    });
+  });
 }
 
 async function redirectIfAlreadyLoggedIn(alertId) {
@@ -158,14 +189,21 @@ function initRegisterForm(formId, alertId, btnId) {
     const email = document.getElementById('email').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const password = document.getElementById('password').value;
+    const confirmPasswordEl = document.getElementById('confirmPassword');
+    const confirmPassword = confirmPasswordEl ? confirmPasswordEl.value : password;
 
-    if (!name || !email || !phone || !password) {
+    if (!name || !email || !phone || !password || !confirmPassword) {
       showAlert(alertId, 'Please fill in all fields.');
       return;
     }
 
     if (password.length < 8) {
       showAlert(alertId, 'Password must be at least 8 characters.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showAlert(alertId, 'Password and confirm password do not match.');
       return;
     }
 

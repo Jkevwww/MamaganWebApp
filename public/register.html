@@ -10,15 +10,15 @@
   <link rel="stylesheet" href="/css/google_oauth.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="auth-page-bg">
+<body class="auth-page auth-page-bg">
   <div class="auth-wrapper">
     <div class="auth-card">
       <div class="text-center auth-logo-block">
         <a href="/" aria-label="Mamagan home"><img src="/mamagan-logo.svg" alt="Mamagan Logo" height="50"></a>
       </div>
 
-      <h1>Create Account</h1>
-      <p class="subtitle">Join Mamagan and book facilities easily</p>
+      <h1 class="auth-title">Create your Mamagan Account</h1>
+      <p class="auth-subtitle subtitle">Book cottages, cabanas, and beach equipment online.</p>
 
       <div class="alert alert-error" id="alertBox"></div>
 
@@ -37,14 +37,28 @@
         </div>
         <div class="form-group">
           <label for="password"><i class="icon-xs-inline" data-lucide="lock"></i> Password</label>
-          <input type="password" id="password" placeholder="Min. 8 characters" required />
+          <div class="input-wrapper password-field">
+            <input type="password" id="password" placeholder="Min. 8 characters" required />
+            <button class="password-toggle" type="button" data-target="password" aria-label="Show password">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword"><i class="icon-xs-inline" data-lucide="shield-check"></i> Confirm Password</label>
+          <div class="input-wrapper password-field">
+            <input type="password" id="confirmPassword" placeholder="Confirm password" required />
+            <button class="password-toggle" type="button" data-target="confirmPassword" aria-label="Show password">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
         </div>
 
         <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Create Account</button>
       </form>
 
       <p class="auth-switch-text auth-switch-text--spacious">
-        Already have an account? <a class="auth-switch-link" href="/login.html">Sign In</a>
+        Already have an account? <a class="auth-switch-link" href="/login.html">Login</a>
       </p>
 
       <div class="oauth-divider">
@@ -54,13 +68,13 @@
       </div>
 
       <div class="oauth-stack">
-        <a class="btn btn-google btn-block" href="/api/auth/google" id="googleRegisterBtn" aria-label="Continue using Google">
+        <a class="btn btn-google btn-block" href="/api/auth/google" id="googleRegisterBtn" aria-label="Continue with Google">
           <img class="oauth-provider-icon" src="/assets/images/google.svg" alt="" aria-hidden="true">
-          Continue using Google
+          Continue with Google
         </a>
-        <a class="btn btn-github btn-block" href="/api/auth/github" id="githubRegisterBtn" aria-label="Continue using GitHub">
+        <a class="btn btn-github btn-block" href="/api/auth/github" id="githubRegisterBtn" aria-label="Continue with GitHub">
           <img class="oauth-provider-icon" src="/assets/images/github.svg" alt="" aria-hidden="true">
-          Continue using GitHub
+          Continue with GitHub
         </a>
       </div>
     </div>
@@ -68,6 +82,7 @@
 
   <script src="/js/auth.js"></script>
   <script>
+    initPasswordToggles();
     lucide.createIcons();
     initRegisterForm('registerForm', 'alertBox', 'submitBtn');
   </script>
