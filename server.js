@@ -44,7 +44,22 @@ const corsOrigins = (process.env.CLIENT_URL || process.env.CORS_ORIGIN || 'http:
   .filter(Boolean);
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'https://lottie.host'],
+        frameSrc: ["'self'", 'https://lottie.host'],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+      },
+    },
+  })
+);
 app.use(
   cors({
     origin: corsOrigins.length ? corsOrigins : true,

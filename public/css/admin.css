@@ -1313,14 +1313,32 @@ body.admin-login-body {
 .table-action-row .btn-sm {
   display: inline-flex;
   align-items: center;
+  min-height: 34px;
+  padding: 0.42rem 0.72rem;
   gap: 0.25rem;
 }
 
 .table-action-row .action-icon {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   object-fit: contain;
-  flex: 0 0 15px;
+  flex: 0 0 17px;
+}
+
+.btn-view .action-icon {
+  filter: brightness(0) saturate(100%) invert(31%) sepia(52%) saturate(997%) hue-rotate(166deg) brightness(94%) contrast(93%);
+}
+
+.btn-approve .action-icon {
+  filter: brightness(0) saturate(100%) invert(24%) sepia(52%) saturate(1028%) hue-rotate(121deg) brightness(92%) contrast(95%);
+}
+
+.btn-toggle .action-icon {
+  filter: brightness(0) saturate(100%) invert(30%) sepia(62%) saturate(865%) hue-rotate(2deg) brightness(92%) contrast(92%);
+}
+
+.btn-cancel .action-icon {
+  filter: brightness(0) saturate(100%) invert(17%) sepia(83%) saturate(2391%) hue-rotate(346deg) brightness(92%) contrast(93%);
 }
 
 .btn-view {
@@ -1395,6 +1413,7 @@ body.admin-login-body {
   width: 180px !important;
   height: 180px !important;
   margin: -0.4rem auto 0;
+  border: 0;
   display: block;
 }
 
