@@ -11,185 +11,217 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="admin-body">
-
-  <header class="page-header">
-    <h1 class="page-title">Facilities</h1>
-    <p class="page-subtitle">Create, edit, and publish resort facilities and inventory.</p>
-  </header>
-
-  <div class="toolbar">
-    <div class="search-filters toolbar-filters">
-      <div class="search-field">
-        <i data-lucide="search" aria-hidden="true"></i>
-        <input type="text" id="facilitySearch" placeholder="Search facilities..." />
-      </div>
-      <select id="categoryFilter" class="form-select facility-category-filter" aria-label="Filter by category">
-        <option value="">All Categories</option>
-        <option value="COTTAGE">Cottages</option>
-        <option value="CABANA">Cabanas</option>
-        <option value="BEACH_EQUIPMENT">Equipment</option>
-      </select>
+  <header class="page-header facilities-page-header">
+    <div>
+      <h1 class="page-title">Manage Facilities</h1>
+      <p class="page-subtitle">Manage cottages, rooms/cabanas, and beach equipment.</p>
     </div>
     <button type="button" class="btn btn-primary" id="addFacilityBtn">
-      <i data-lucide="plus" aria-hidden="true"></i> Add Facility
+      <i data-lucide="plus" aria-hidden="true"></i>
+      Add Facility
     </button>
-  </div>
+  </header>
 
-  <div class="table-card">
+  <div id="facilityAlert" class="facility-alert" role="status" aria-live="polite"></div>
+
+  <section class="toolbar facilities-toolbar" aria-label="Facility filters">
+    <div class="search-field facility-search-field">
+      <i data-lucide="search" aria-hidden="true"></i>
+      <input type="search" id="facilitySearch" placeholder="Search facilities..." autocomplete="off">
+    </div>
+    <select id="categoryFilter" class="form-select" aria-label="Category filter">
+      <option value="">All categories</option>
+      <option value="COTTAGE">Cottages</option>
+      <option value="CABANA">Rooms / Cabanas</option>
+      <option value="BEACH_EQUIPMENT">Beach Equipment</option>
+    </select>
+    <select id="sizeFilter" class="form-select" aria-label="Size filter">
+      <option value="">All sizes</option>
+      <option value="SMALL">Small</option>
+      <option value="MEDIUM">Medium</option>
+      <option value="LARGE">Large</option>
+      <option value="EXTRA_LARGE">Extra Large</option>
+    </select>
+    <select id="activeFilter" class="form-select" aria-label="Active status filter">
+      <option value="">All active statuses</option>
+      <option value="1">Active</option>
+      <option value="0">Inactive</option>
+    </select>
+    <select id="bookableFilter" class="form-select" aria-label="Bookable status filter">
+      <option value="">All bookable statuses</option>
+      <option value="1">Bookable</option>
+      <option value="0">Not Bookable</option>
+    </select>
+  </section>
+
+  <section class="table-card facilities-table-card">
     <div class="table-responsive">
-      <table class="data-table" id="facilitiesTable">
-      <thead>
-        <tr>
-          <th>Image</th>
-          <th>Name</th>
-          <th>Category</th>
-          <th>Price/Rate</th>
-          <th>Inventory</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="facilitiesTbody">
-        <!-- Loaded by JS -->
-        </tbody>
+      <table class="data-table facilities-table" id="facilitiesTable">
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Size</th>
+            <th>Units</th>
+            <th>Price/Rate</th>
+            <th>Capacity</th>
+            <th>Active</th>
+            <th>Bookable</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="facilitiesTbody"></tbody>
       </table>
     </div>
-  </div>
+  </section>
 
-  <!-- Facility Modal -->
   <div class="modal-overlay" id="facilityModal" role="presentation">
     <div class="modal modal-dialog facility-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-header">
-        <h2 id="modalTitle">Add New Facility</h2>
+        <div>
+          <h2 id="modalTitle">Add Facility</h2>
+          <p class="modal-subtitle" id="modalSubtitle">Fill in the facility details.</p>
+        </div>
         <button type="button" id="closeModal" class="modal-close" aria-label="Close dialog">
           <i data-lucide="x"></i>
         </button>
       </div>
 
       <form id="facilityForm" class="facility-modal-form" enctype="multipart/form-data">
-        <input type="hidden" id="facilityId">
-        
+        <input type="hidden" id="facilityId" name="id">
+
         <div class="facility-form-grid">
-          <!-- Basic Info -->
-          <div>
-            <div class="form-group">
-              <label for="name">Facility Name <span class="label-required" aria-hidden="true">*</span></label>
-              <input class="form-control" type="text" id="name" name="name" required>
-            </div>
-            <div class="form-group">
-              <label for="category">Category <span class="label-required" aria-hidden="true">*</span></label>
-              <select class="form-select" id="category" name="category" required>
-                <option value="COTTAGE">Cottage</option>
-                <option value="CABANA">Cabana</option>
-                <option value="BEACH_EQUIPMENT">Beach Equipment</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="size">Size/Type</label>
-              <input class="form-control" type="text" id="size" name="size" placeholder="e.g. Small, Large, Standard">
-            </div>
-            <div class="form-group">
-              <label for="description">Description</label>
-              <textarea class="form-textarea" id="description" name="description" rows="4"></textarea>
-            </div>
+          <div class="form-group">
+            <label for="name">Facility name <span class="label-required" aria-hidden="true">*</span></label>
+            <input class="form-control" type="text" id="name" name="name" required>
           </div>
+          <div class="form-group">
+            <label for="category">Category <span class="label-required" aria-hidden="true">*</span></label>
+            <select class="form-select" id="category" name="category" required>
+              <option value="COTTAGE">Cottage</option>
+              <option value="CABANA">Room / Cabana</option>
+              <option value="BEACH_EQUIPMENT">Beach Equipment</option>
+            </select>
+          </div>
+          <div class="form-group field-size" data-field-group="size">
+            <label for="size">Size <span class="label-required" aria-hidden="true">*</span></label>
+            <select class="form-select" id="size" name="size">
+              <option value="">Select size</option>
+              <option value="SMALL">Small</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LARGE">Large</option>
+              <option value="EXTRA_LARGE">Extra Large</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="inventory_count">Inventory units <span class="label-required" aria-hidden="true">*</span></label>
+            <input class="form-control" type="number" id="inventory_count" name="inventory_count" min="0" step="1" required>
+          </div>
+        </div>
 
-          <!-- Pricing & Capacity -->
-          <div>
-            <div class="form-grid-2">
-              <div class="form-group">
-                <label for="inventory_count">Inventory (Units)</label>
-                <input class="form-control" type="number" id="inventory_count" name="inventory_count" value="1" min="0" required>
-              </div>
-              <div class="form-group">
-                <label for="rental_type">Rental Type</label>
-                <select class="form-select" id="rental_type" name="rental_type" required>
-                  <option value="FIXED">Fixed</option>
-                  <option value="HOURLY">Hourly</option>
-                  <option value="DAILY">Daily</option>
-                </select>
-              </div>
-            </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea class="form-textarea" id="description" name="description" rows="3"></textarea>
+        </div>
 
-            <div class="form-grid-2">
-              <div class="form-group">
-                <label for="capacity_min">Min Pax</label>
-                <input class="form-control" type="number" id="capacity_min" name="capacity_min" value="1" min="1">
-              </div>
-              <div class="form-group">
-                <label for="capacity_max">Max Pax</label>
-                <input class="form-control" type="number" id="capacity_max" name="capacity_max" value="1" min="1">
-              </div>
-            </div>
-
-            <div id="rateFields">
-               <div class="form-grid-2">
-                 <div class="form-group">
-                   <label for="day_rate_min">Day Rate Min (₱)</label>
-                   <input class="form-control" type="number" id="day_rate_min" name="day_rate_min" value="0">
-                 </div>
-                 <div class="form-group">
-                   <label for="day_rate_max">Day Rate Max (₱)</label>
-                   <input class="form-control" type="number" id="day_rate_max" name="day_rate_max" value="0">
-                 </div>
-               </div>
-               <div class="form-grid-2">
-                 <div class="form-group">
-                   <label for="night_surcharge_min">Night Surcharge Min (₱)</label>
-                   <input class="form-control" type="number" id="night_surcharge_min" name="night_surcharge_min" value="0">
-                 </div>
-                 <div class="form-group">
-                   <label for="night_surcharge_max">Night Surcharge Max (₱)</label>
-                   <input class="form-control" type="number" id="night_surcharge_max" name="night_surcharge_max" value="0">
-                 </div>
-               </div>
-               <div class="form-grid-2">
-                 <div class="form-group">
-                   <label for="hourly_rate">Hourly Rate (₱)</label>
-                   <input class="form-control" type="number" id="hourly_rate" name="hourly_rate" value="0">
-                 </div>
-                 <div class="form-group">
-                   <label for="daily_rate">Daily Rate (₱)</label>
-                   <input class="form-control" type="number" id="daily_rate" name="daily_rate" value="0">
-                 </div>
-               </div>
-            </div>
+        <div class="facility-form-grid">
+          <div class="form-group field-capacity" data-field-group="cabana">
+            <label for="capacity_min">Capacity min</label>
+            <input class="form-control" type="number" id="capacity_min" name="capacity_min" min="0" step="1">
+          </div>
+          <div class="form-group field-capacity" data-field-group="cabana">
+            <label for="capacity_max">Capacity max</label>
+            <input class="form-control" type="number" id="capacity_max" name="capacity_max" min="0" step="1">
+          </div>
+          <div class="form-group field-cottage" data-field-group="cottage">
+            <label for="price_min">Price min</label>
+            <input class="form-control" type="number" id="price_min" name="price_min" min="0" step="0.01">
+          </div>
+          <div class="form-group field-cottage" data-field-group="cottage">
+            <label for="price_max">Price max</label>
+            <input class="form-control" type="number" id="price_max" name="price_max" min="0" step="0.01">
+          </div>
+          <div class="form-group field-cabana" data-field-group="cabana">
+            <label for="day_rate_min">Day rate min</label>
+            <input class="form-control" type="number" id="day_rate_min" name="day_rate_min" min="0" step="0.01">
+          </div>
+          <div class="form-group field-cabana" data-field-group="cabana">
+            <label for="day_rate_max">Day rate max</label>
+            <input class="form-control" type="number" id="day_rate_max" name="day_rate_max" min="0" step="0.01">
+          </div>
+          <div class="form-group field-cabana" data-field-group="cabana">
+            <label for="night_surcharge_min">Night surcharge min</label>
+            <input class="form-control" type="number" id="night_surcharge_min" name="night_surcharge_min" min="0" step="0.01">
+          </div>
+          <div class="form-group field-cabana" data-field-group="cabana">
+            <label for="night_surcharge_max">Night surcharge max</label>
+            <input class="form-control" type="number" id="night_surcharge_max" name="night_surcharge_max" min="0" step="0.01">
+          </div>
+          <div class="form-group field-equipment" data-field-group="equipment">
+            <label for="hourly_rate">Hourly rate</label>
+            <input class="form-control" type="number" id="hourly_rate" name="hourly_rate" min="0" step="0.01">
+          </div>
+          <div class="form-group field-equipment" data-field-group="equipment">
+            <label for="daily_rate">Daily rate</label>
+            <input class="form-control" type="number" id="daily_rate" name="daily_rate" min="0" step="0.01">
+          </div>
+          <div class="form-group field-equipment" data-field-group="equipment">
+            <label for="rental_type">Rental type</label>
+            <select class="form-select" id="rental_type" name="rental_type">
+              <option value="HOURLY_OR_DAILY">Hourly or Daily</option>
+              <option value="HOURLY">Hourly</option>
+              <option value="DAILY">Daily</option>
+            </select>
           </div>
         </div>
 
         <hr class="facility-modal-divider">
 
-        <div class="facility-form-grid">
+        <div class="facility-form-grid image-form-grid">
           <div>
             <div class="form-group">
-              <label for="image_url">Image URL (Link)</label>
-              <input class="form-control" type="text" id="image_url" name="image_url" placeholder="https://...">
+              <label for="image_url">Image URL/link</label>
+              <input class="form-control" type="url" id="image_url" name="image_url" placeholder="https://example.com/image.webp">
             </div>
             <div class="form-group">
-              <label for="image_file">Or Upload Image</label>
-              <input class="form-control" type="file" id="image_file" name="image" accept="image/*">
+              <label for="image_file">Local image upload</label>
+              <input class="form-control" type="file" id="image_file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+            </div>
+            <div class="image-action-row">
+              <button type="button" class="btn btn-secondary btn-sm" id="uploadImageBtn">
+                <i data-lucide="upload" aria-hidden="true"></i>
+                Upload Image
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="clearImageBtn">
+                <i data-lucide="image-off" aria-hidden="true"></i>
+                Clear Image
+              </button>
             </div>
           </div>
-          <div id="imagePreviewContainer" class="image-preview-box">
-             <p class="text-muted">Image Preview</p>
-             <img id="imagePreview" src="/mamagan-logo.svg" alt="Preview">
+          <div class="image-preview-box">
+            <span class="image-preview-label">Image Preview</span>
+            <img id="imagePreview" src="/mamagan-logo.svg" alt="Facility image preview">
           </div>
         </div>
 
-        <div class="checkbox-row">
-           <label><input type="checkbox" id="active" name="active" checked value="1"> Active (Visible)</label>
-           <label><input type="checkbox" id="bookable" name="bookable" checked value="1"> Bookable</label>
-           <label><input type="checkbox" id="restricted_during_peak_hours" name="restricted_during_peak_hours" value="1"> Peak hour restricted</label>
+        <div class="checkbox-row facility-switch-row">
+          <label><input type="checkbox" id="active" name="active" checked> Active status</label>
+          <label><input type="checkbox" id="bookable" name="bookable" checked> Bookable status</label>
+          <label class="field-equipment" data-field-group="equipment"><input type="checkbox" id="restricted_during_peak_hours" name="restricted_during_peak_hours"> Restricted during peak hours</label>
         </div>
 
-        <div class="form-group form-group-unavailable">
-          <label for="unavailable_reason">Unavailable reason (if unbookable)</label>
-          <input class="form-control" type="text" id="unavailable_reason" name="unavailable_reason">
+        <div class="form-group">
+          <label for="unavailable_reason">Unavailable reason</label>
+          <input class="form-control" type="text" id="unavailable_reason" name="unavailable_reason" placeholder="Shown when inactive or not bookable">
         </div>
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="saveBtn">Save Facility</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">
+            <i data-lucide="save" aria-hidden="true"></i>
+            Save
+          </button>
         </div>
       </form>
     </div>
@@ -197,6 +229,6 @@
 
   <script src="/js/skeleton.js"></script>
   <script src="/assets/js/admin-layout.js"></script>
-  <script src="/admin/js/facilities.js"></script>
+  <script src="/assets/js/admin-facilities.js"></script>
 </body>
 </html>

@@ -1,6 +1,27 @@
 const adminService = require('../services/admin.service');
-const facilityService = require('../services/facility.service');
-const { logAction } = require('../utils/logger');
+const { logSystemAction } = require('../utils/logger');
+
+function requestMeta(req) {
+  return {
+    userId: req.user?.id || null,
+    ipAddress: req.ip || req.connection?.remoteAddress || null,
+    userAgent: req.headers['user-agent'] || null,
+  };
+}
+
+async function logFacilityAction(req, action, targetId, details) {
+  const { userId, ipAddress, userAgent } = requestMeta(req);
+  await logSystemAction({
+    userId,
+    action,
+    module: 'FACILITIES',
+    targetType: 'FACILITY',
+    targetId,
+    details,
+    ipAddress,
+    userAgent,
+  });
+}
 
 async function getDashboardSummary(req, res, next) {
   try {
@@ -51,7 +72,7 @@ async function getAllFacilities(req, res, next) {
 
 async function getFacilityById(req, res, next) {
   try {
-    const facility = await facilityService.getFacilityById(req.params.id);
+    const facility = await adminService.getFacilityByIdAdmin(req.params.id);
     res.status(200).json(facility);
   } catch (err) {
     next(err);
@@ -65,15 +86,8 @@ async function createFacility(req, res, next) {
       data.image_url = `/uploads/facilities/${req.file.filename}`;
     }
     const id = await adminService.createFacility(data);
-    
-    await logAction({
-      userId: req.user.id,
-      action: 'FACILITY_CREATE',
-      entityType: 'FACILITY',
-      entityId: id,
-      details: { name: data.name },
-      ipAddress: req.ip
-    });
+
+    await logFacilityAction(req, 'FACILITY_CREATED', id, { name: data.name, category: data.category });
 
     res.status(201).json({ id, message: 'Facility created successfully' });
   } catch (err) {
@@ -90,16 +104,39 @@ async function updateFacility(req, res, next) {
     const success = await adminService.updateFacility(req.params.id, data);
     if (!success) return res.status(404).json({ message: 'Facility not found' });
 
-    await logAction({
-      userId: req.user.id,
-      action: 'FACILITY_UPDATE',
-      entityType: 'FACILITY',
-      entityId: req.params.id,
-      details: { name: data.name },
-      ipAddress: req.ip
-    });
+    await logFacilityAction(req, 'FACILITY_UPDATED', req.params.id, { name: data.name, category: data.category });
 
     res.status(200).json({ message: 'Facility updated successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateFacilityStatus(req, res, next) {
+  try {
+    const success = await adminService.updateFacilityStatus(req.params.id, req.body);
+    if (!success) return res.status(404).json({ message: 'Facility not found' });
+
+    await logFacilityAction(req, 'FACILITY_STATUS_UPDATED', req.params.id, {
+      active: req.body.active,
+      bookable: req.body.bookable,
+    });
+
+    res.status(200).json({ message: 'Facility status updated successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateFacilityImage(req, res, next) {
+  try {
+    const imageUrl = req.file ? `/uploads/facilities/${req.file.filename}` : req.body.image_url;
+    const success = await adminService.updateFacilityImage(req.params.id, imageUrl || null);
+    if (!success) return res.status(404).json({ message: 'Facility not found' });
+
+    await logFacilityAction(req, 'FACILITY_IMAGE_UPDATED', req.params.id, { image_url: imageUrl || null });
+
+    res.status(200).json({ image_url: imageUrl || null, message: 'Facility image updated successfully' });
   } catch (err) {
     next(err);
   }
@@ -110,13 +147,7 @@ async function deleteFacility(req, res, next) {
     const success = await adminService.deleteFacility(req.params.id);
     if (!success) return res.status(404).json({ message: 'Facility not found' });
 
-    await logAction({
-      userId: req.user.id,
-      action: 'FACILITY_DELETE',
-      entityType: 'FACILITY',
-      entityId: req.params.id,
-      ipAddress: req.ip
-    });
+    await logFacilityAction(req, 'FACILITY_DELETED', req.params.id, {});
 
     res.status(200).json({ message: 'Facility deleted successfully' });
   } catch (err) {
@@ -142,6 +173,8 @@ module.exports = {
   getFacilityById,
   createFacility,
   updateFacility,
+  updateFacilityStatus,
+  updateFacilityImage,
   deleteFacility,
   listBookings,
 };

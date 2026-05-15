@@ -104,10 +104,14 @@
     function renderFacility(f) {
       const container = document.getElementById('facilityDetails');
       const imgSrc = f.image_url || 'https://placehold.co/600x400';
-      const rentalLabel = f.rental_type === 'DAILY' ? 'day' : f.rental_type === 'HOURLY' ? 'hour' : 'session';
-      const priceRange = f.price_max > f.price_min
-        ? `₱${Number(f.price_min).toLocaleString()} - ₱${Number(f.price_max).toLocaleString()}`
-        : `₱${Number(f.price_min).toLocaleString()}`;
+      const rentalLabel = f.category === 'BEACH_EQUIPMENT'
+        ? (f.rental_type === 'DAILY' ? 'day' : f.rental_type === 'HOURLY' ? 'hour' : 'hour / day')
+        : f.category === 'CABANA' ? 'day' : 'session';
+      const rateMin = f.category === 'BEACH_EQUIPMENT' ? f.hourly_rate : f.category === 'CABANA' ? f.day_rate_min : f.price_min;
+      const rateMax = f.category === 'BEACH_EQUIPMENT' ? f.daily_rate : f.category === 'CABANA' ? f.day_rate_max : f.price_max;
+      const priceRange = Number(rateMax) > Number(rateMin)
+        ? `₱${Number(rateMin).toLocaleString()} - ₱${Number(rateMax).toLocaleString()}`
+        : `₱${Number(rateMin || 0).toLocaleString()}`;
 
       container.innerHTML = `
         <div class="facility-detail-media">
@@ -117,7 +121,7 @@
           <h1 class="facility-detail-title">${escHtml(f.name)}</h1>
           <div class="facility-meta-row">
             <span class="badge badge-muted">${escHtml(f.size)}</span>
-            <span class="badge badge-warm">${f.capacity_min}-${f.capacity_max} pax</span>
+            ${f.capacity_max ? `<span class="badge badge-warm">${f.capacity_min || 1}-${f.capacity_max} pax</span>` : ''}
             <span class="badge badge-info">${escHtml(f.category)}</span>
           </div>
 
@@ -129,10 +133,10 @@
               ${priceRange}
               <small> / ${rentalLabel}</small>
             </div>
-            ${f.category === 'Room' ? '<p class="facility-rate-note">* Night surcharge applies for overnight stays.</p>' : ''}
+            ${f.category === 'CABANA' ? '<p class="facility-rate-note">* Night surcharge applies for overnight stays.</p>' : ''}
           </div>
 
-          ${f.is_bookable ? `
+          ${f.is_bookable || f.bookable ? `
             <a href="/booking.html?id=${encodeURIComponent(f.id)}" class="btn btn-primary btn-block btn-large">Book this Facility</a>
           ` : `
             <div class="unavailable-panel">
@@ -145,7 +149,7 @@
           <div class="facility-rules">
             <h4>Facility Rules</h4>
             <ul>
-              <li><i class="icon-xs-primary" data-lucide="check-circle"></i> Maximum capacity of ${f.capacity_max} people must be strictly followed.</li>
+              ${f.capacity_max ? `<li><i class="icon-xs-primary" data-lucide="check-circle"></i> Maximum capacity of ${f.capacity_max} people must be strictly followed.</li>` : ''}
               <li><i class="icon-xs-primary" data-lucide="check-circle"></i> No loud music after 10:00 PM.</li>
               <li><i class="icon-xs-primary" data-lucide="check-circle"></i> Please keep the area clean.</li>
             </ul>

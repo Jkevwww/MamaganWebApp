@@ -53,6 +53,8 @@ npm run db:seed
 
 Migrations are additive where possible; new OAuth and logging columns use `CREATE TABLE IF NOT EXISTS` / conditional `ALTER` patterns. Review `database/migrations/` if you maintain a long-lived production database.
 
+Facility images can be set with an external Image URL or uploaded locally from the admin Manage Facilities page. Local uploads are stored in `public/uploads/facilities`; on Render these files only persist across deploys/restarts when a persistent disk is configured, so Image URL is the recommended production option.
+
 To create or repair only the default admin account after setting the `ADMIN_*` variables:
 
 ```bash

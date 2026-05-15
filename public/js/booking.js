@@ -30,7 +30,7 @@ async function loadFacility() {
     if (!res.ok) throw new Error('Facility not found');
     currentFacility = await res.json();
 
-    if (!currentFacility.is_bookable) {
+    if (!currentFacility.is_bookable && !currentFacility.bookable) {
       showError('Facility Unavailable', currentFacility.unavailable_reason || 'This facility is not currently available for booking.');
       return;
     }
@@ -48,13 +48,13 @@ function renderFacilityInfo() {
     <h1 class="text-primary-heading">${escHtml(currentFacility.name)}</h1>
     <p class="booking-description">${escHtml(currentFacility.description)}</p>
     <div class="booking-badge-row">
-      <span class="badge badge-warm"><i class="icon-xs-middle" data-lucide="users"></i> Up to ${currentFacility.capacity_max} pax</span>
+      ${currentFacility.capacity_max ? `<span class="badge badge-warm"><i class="icon-xs-middle" data-lucide="users"></i> Up to ${currentFacility.capacity_max} pax</span>` : ''}
       <span class="badge badge-info"><i class="icon-xs-middle" data-lucide="package"></i> ${currentFacility.inventory_count} units available</span>
       <span class="badge badge-muted">${currentFacility.category}</span>
     </div>
   `;
   
-  if (currentFacility.category === 'Room') {
+  if (currentFacility.category === 'CABANA') {
     document.getElementById('bookingTypeGroup').style.display = 'block';
   }
 
@@ -101,7 +101,7 @@ async function updateState() {
     return;
   }
   
-  if (guestCount > (currentFacility.capacity_max * quantity)) {
+  if (currentFacility.capacity_max && guestCount > (currentFacility.capacity_max * quantity)) {
     showAvailabilityStatus(`Guest count exceeds capacity (${currentFacility.capacity_max * quantity} pax total)`, 'error');
     setSubmitEnabled(false);
     return;
@@ -133,31 +133,37 @@ function calculateTotalDisplay(quantity, guestCount, startTime, endTime, booking
   let total = 0;
   let breakdown = '';
 
-  if (currentFacility.category === 'Cottage') {
+  if (currentFacility.category === 'COTTAGE') {
     total = currentFacility.price_min * quantity;
     breakdown = `₱${currentFacility.price_min.toLocaleString()} x ${quantity} unit(s)`;
   } 
-  else if (currentFacility.category === 'Room') {
-    total = currentFacility.price_min * quantity;
-    breakdown = `Base: ₱${currentFacility.price_min.toLocaleString()} x ${quantity} unit(s)`;
+  else if (currentFacility.category === 'CABANA') {
+    const dayRate = Number(currentFacility.day_rate_min || currentFacility.price_min || 0);
+    total = dayRate * quantity;
+    breakdown = `Base: ₱${dayRate.toLocaleString()} x ${quantity} unit(s)`;
     if (bookingType === 'NIGHT') {
-      const surcharge = guestCount > 6 ? 500 : 200;
+      const surcharge = Number(guestCount > 6
+        ? (currentFacility.night_surcharge_max || 500)
+        : (currentFacility.night_surcharge_min || 200));
       total += (surcharge * quantity);
       breakdown += `<br>Night Surcharge: ₱${surcharge.toLocaleString()} x ${quantity}`;
     }
   } 
-  else if (currentFacility.category === 'Equipment') {
+  else if (currentFacility.category === 'BEACH_EQUIPMENT') {
     const start = new Date(`1970-01-01T${startTime}`);
     const end = new Date(`1970-01-01T${endTime}`);
     const hours = Math.ceil((end - start) / (1000 * 60 * 60));
     
     // Check if daily (approx 8+ hours)
+    const hourlyRate = Number(currentFacility.hourly_rate || currentFacility.price_min || 0);
+    const dailyRate = Number(currentFacility.daily_rate || currentFacility.price_max || 0);
+
     if (hours >= 8) {
-      total = currentFacility.price_max * quantity;
-      breakdown = `Daily Rate: ₱${currentFacility.price_max.toLocaleString()} x ${quantity}`;
+      total = dailyRate * quantity;
+      breakdown = `Daily Rate: ₱${dailyRate.toLocaleString()} x ${quantity}`;
     } else {
-      total = currentFacility.price_min * hours * quantity;
-      breakdown = `Hourly: ₱${currentFacility.price_min.toLocaleString()} x ${hours} hr(s) x ${quantity}`;
+      total = hourlyRate * hours * quantity;
+      breakdown = `Hourly: ₱${hourlyRate.toLocaleString()} x ${hours} hr(s) x ${quantity}`;
     }
   }
 

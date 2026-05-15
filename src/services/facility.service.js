@@ -1,11 +1,20 @@
 const { pool } = require('../config/db');
 const { AppError } = require('../middleware/error');
 
+const FACILITY_COLUMNS = `
+  id, name, category, size, description, image_url, inventory_count,
+  capacity_min, capacity_max, price_min, price_max,
+  day_rate_min, day_rate_max, night_surcharge_min, night_surcharge_max,
+  hourly_rate, daily_rate, rental_type, active, bookable,
+  bookable AS is_bookable,
+  unavailable_reason, restricted_during_peak_hours, created_at, updated_at
+`;
+
 /**
  * Get all facilities with optional filters
  */
 async function getAllFacilities(filters = {}) {
-  let query = 'SELECT * FROM facilities WHERE active = 1';
+  let query = `SELECT ${FACILITY_COLUMNS} FROM facilities WHERE active = 1 AND deleted_at IS NULL`;
   const params = [];
 
   if (filters.category) {
@@ -33,14 +42,14 @@ async function getAllFacilities(filters = {}) {
     params.push(filters.capacity);
   }
 
-  query += ' ORDER BY category, name';
+  query += ` ORDER BY FIELD(category, 'COTTAGE', 'CABANA', 'BEACH_EQUIPMENT'), FIELD(size, 'SMALL', 'MEDIUM', 'LARGE', 'EXTRA_LARGE'), name`;
 
   const [rows] = await pool.query(query, params);
   return rows;
 }
 
 async function getFacilityById(id) {
-  const [rows] = await pool.query('SELECT * FROM facilities WHERE id = ?', [id]);
+  const [rows] = await pool.query(`SELECT ${FACILITY_COLUMNS} FROM facilities WHERE id = ? AND deleted_at IS NULL`, [id]);
   if (rows.length === 0) {
     throw new AppError('Facility not found', 404);
   }
@@ -122,9 +131,11 @@ function calculateTotal(facility, { quantity, guest_count, startTime, endTime, b
     total = facility.price_min * quantity;
   } 
   else if (facility.category === 'CABANA') {
-    total = facility.price_min * quantity;
+    total = (facility.day_rate_min || facility.price_min) * quantity;
     if (bookingType === 'NIGHT') {
-      const surcharge = guest_count > 6 ? 500 : 200;
+      const surcharge = guest_count > 6
+        ? (facility.night_surcharge_max || 500)
+        : (facility.night_surcharge_min || 200);
       total += (surcharge * quantity);
     }
   } 
@@ -133,9 +144,16 @@ function calculateTotal(facility, { quantity, guest_count, startTime, endTime, b
       const start = new Date(`1970-01-01T${startTime}`);
       const end = new Date(`1970-01-01T${endTime}`);
       const hours = Math.ceil((end - start) / (1000 * 60 * 60));
-      total = facility.price_min * hours * quantity;
+      total = (facility.hourly_rate || facility.price_min) * hours * quantity;
+    } else if (facility.rental_type === 'HOURLY_OR_DAILY') {
+      const start = new Date(`1970-01-01T${startTime}`);
+      const end = new Date(`1970-01-01T${endTime}`);
+      const hours = Math.ceil((end - start) / (1000 * 60 * 60));
+      total = hours >= 8
+        ? (facility.daily_rate || facility.price_max) * quantity
+        : (facility.hourly_rate || facility.price_min) * hours * quantity;
     } else {
-      total = facility.price_max * quantity; 
+      total = (facility.daily_rate || facility.price_max) * quantity; 
     }
   }
 
@@ -148,7 +166,7 @@ function calculateTotal(facility, { quantity, guest_count, startTime, endTime, b
 async function bookFacility({ facilityId, userId, date, start_time, end_time, quantity, guest_count, notes, bookingType }) {
   const facility = await getFacilityById(facilityId);
   
-  if (guest_count > (facility.capacity_max * quantity)) {
+  if (facility.capacity_max && guest_count > (facility.capacity_max * quantity)) {
     throw new AppError(`Guest count exceeds maximum capacity (${facility.capacity_max * quantity} pax)`, 400);
   }
 

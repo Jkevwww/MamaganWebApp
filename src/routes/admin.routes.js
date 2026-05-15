@@ -6,11 +6,15 @@ const authMiddleware = require('../middleware/auth');
 const { requirePermission } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+const uploadDir = path.join(__dirname, '../../public/uploads/facilities');
+fs.mkdirSync(uploadDir, { recursive: true });
 
 // Configure Multer for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'public/uploads/facilities');
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -27,7 +31,7 @@ const upload = multer({
     if (extname && mimetype) return cb(null, true);
     cb(new Error('Only images (jpg, png, webp) are allowed'));
   },
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }
 });
 
 // Protect all admin routes
@@ -44,8 +48,10 @@ router.get('/bookings', adminController.listBookings);
 // Facilities CRUD
 router.get('/facilities', adminController.getAllFacilities);
 router.get('/facilities/:id', adminController.getFacilityById);
-router.post('/facilities', requirePermission(['SUPER_ADMIN', 'ADMIN']), upload.single('image'), adminController.createFacility);
-router.put('/facilities/:id', requirePermission(['SUPER_ADMIN', 'ADMIN']), upload.single('image'), adminController.updateFacility);
-router.delete('/facilities/:id', requirePermission(['SUPER_ADMIN', 'ADMIN']), adminController.deleteFacility);
+router.post('/facilities', requirePermission(['SUPER_ADMIN', 'ADMIN', 'STAFF']), upload.single('image'), adminController.createFacility);
+router.put('/facilities/:id', requirePermission(['SUPER_ADMIN', 'ADMIN', 'STAFF']), upload.single('image'), adminController.updateFacility);
+router.patch('/facilities/:id/status', requirePermission(['SUPER_ADMIN', 'ADMIN', 'STAFF']), adminController.updateFacilityStatus);
+router.post('/facilities/:id/image', requirePermission(['SUPER_ADMIN', 'ADMIN', 'STAFF']), upload.single('image'), adminController.updateFacilityImage);
+router.delete('/facilities/:id', requirePermission(['SUPER_ADMIN', 'ADMIN', 'STAFF']), adminController.deleteFacility);
 
 module.exports = router;

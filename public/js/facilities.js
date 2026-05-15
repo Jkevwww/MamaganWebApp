@@ -104,7 +104,7 @@ async function loadFacilities() {
              <span class="badge ${f.active && f.bookable ? 'badge-available' : 'badge-unavailable'}">
               ${f.active && f.bookable ? 'Available' : 'Unavailable'}
             </span>
-            <span class="badge badge-warm"><i class="icon-xxs" data-lucide="users"></i> ${f.capacity_min}-${f.capacity_max} pax</span>
+            ${f.capacity_max ? `<span class="badge badge-warm"><i class="icon-xxs" data-lucide="users"></i> ${f.capacity_min || 1}-${f.capacity_max} pax</span>` : ''}
             <span class="badge badge-info"><i class="icon-xxs" data-lucide="package"></i> ${f.inventory_count} units</span>
           </div>
           
