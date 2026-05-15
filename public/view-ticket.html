@@ -10,63 +10,107 @@
 </head>
 <body>
 
-  <div class="ticket-page">
-    <div class="container narrow-container">
-      <div class="ticket-brand">
-        <a href="/"><img src="/mamagan-logo.svg" alt="Mamagan Logo" height="56"></a>
-      </div>
-
-      <div class="ticket-card-shell">
-        <div class="ticket-card-header">
-          <h2>Booking Confirmation</h2>
-          <p>Show this QR code upon arrival</p>
-        </div>
-
-        <div class="ticket-card-body">
-          <div id="qr-container" class="ticket-qr-frame">
-            <i data-lucide="qr-code" style="width:140px;height:140px;color:#334155;"></i>
-          </div>
-
-          <div class="ticket-kv-panel">
-            <div class="ticket-kv-row">
-              <span>Facility</span>
-              <span id="ticketFacility">Loading...</span>
-            </div>
-            <div class="ticket-kv-row">
-              <span>Date</span>
-              <span id="ticketDate">Loading...</span>
-            </div>
-            <div class="ticket-kv-row">
-              <span>Time</span>
-              <span id="ticketTime">Loading...</span>
-            </div>
-            <div class="ticket-kv-row">
-              <span>Booking ID</span>
-              <span id="ticketID">#0000</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="ticket-card-footer">
-          <button type="button" onclick="window.print()" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:0.5rem;">
-            <i data-lucide="printer" style="width:18px;"></i> Print Ticket
-          </button>
-          <a href="/my-bookings.html" class="text-muted" style="display:block;margin-top:1rem;text-align:center;font-size:0.92rem;">Back to My Bookings</a>
-        </div>
-      </div>
-
-      <p class="ticket-footer-note">Thank you for choosing Mamagan Fun and Adventure Beach Resort!</p>
+  <header class="navbar print-hidden">
+    <div class="brand">
+      <a href="/"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
     </div>
-  </div>
+    <nav>
+      <a href="/facilities.html">Facilities</a>
+      <a href="/my-bookings.html" class="auth-only" style="display:none;">My Bookings</a>
+      <a href="#" id="navUser" class="text-muted" style="opacity:0.85;cursor:default;max-width:180px;overflow:hidden;text-overflow:ellipsis;"></a>
+      <button type="button" id="navLogout" class="btn btn-secondary btn-sm" style="display:none;">Logout</button>
+      <a href="/login.html" class="btn btn-primary btn-sm guest-only">Login</a>
+    </nav>
+  </header>
+
+  <main class="page-content">
+    <div class="ticket-page ticket-page--framed">
+      <div class="container narrow-container">
+        <div class="ticket-brand">
+          <a href="/"><img src="/mamagan-logo.svg" alt="Mamagan Logo" height="56"></a>
+        </div>
+
+        <div class="ticket-card-shell">
+          <div class="ticket-card-header">
+            <h2>Booking Confirmation</h2>
+            <p>Show this QR code upon arrival</p>
+          </div>
+
+          <div class="ticket-card-body">
+            <div id="qr-container" class="ticket-qr-frame">
+              <i data-lucide="qr-code" style="width:140px;height:140px;color:#334155;"></i>
+            </div>
+
+            <div class="ticket-kv-panel">
+              <div class="ticket-kv-row">
+                <span>Facility</span>
+                <span id="ticketFacility">Loading...</span>
+              </div>
+              <div class="ticket-kv-row">
+                <span>Date</span>
+                <span id="ticketDate">Loading...</span>
+              </div>
+              <div class="ticket-kv-row">
+                <span>Time</span>
+                <span id="ticketTime">Loading...</span>
+              </div>
+              <div class="ticket-kv-row">
+                <span>Booking ID</span>
+                <span id="ticketID">#0000</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ticket-card-footer print-hidden">
+            <button type="button" id="printTicketBtn" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:0.5rem;">
+              <i data-lucide="printer" style="width:18px;"></i> Print Ticket
+            </button>
+            <a href="/my-bookings.html" class="text-muted" style="display:block;margin-top:1rem;text-align:center;font-size:0.92rem;">Back to My Bookings</a>
+          </div>
+        </div>
+
+        <p class="ticket-footer-note">Thank you for choosing Mamagan Fun and Adventure Beach Resort!</p>
+      </div>
+    </div>
+  </main>
 
   <script>
-    lucide.createIcons();
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (res.ok) {
+          const user = await res.json();
+          const navUser = document.getElementById('navUser');
+          if (navUser) navUser.textContent = user.name || '';
+          document.querySelectorAll('.auth-only').forEach(el => { el.style.display = ''; });
+          document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
+          const lo = document.getElementById('navLogout');
+          if (lo) lo.style.display = 'inline-block';
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById('navLogout')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      } catch (_) {}
+      localStorage.clear();
+      window.location.replace('/');
+    });
+
+    document.getElementById('printTicketBtn')?.addEventListener('click', () => window.print());
 
     const params = new URLSearchParams(window.location.search);
     document.getElementById('ticketFacility').textContent = params.get('facility') || 'N/A';
     document.getElementById('ticketDate').textContent = params.get('date') || 'N/A';
     document.getElementById('ticketTime').textContent = params.get('time') || 'N/A';
     document.getElementById('ticketID').textContent = '#' + String(params.get('id') || '0000').padStart(4, '0');
+
+    (async () => {
+      await checkAuth();
+      lucide.createIcons();
+    })();
   </script>
 </body>
 </html>

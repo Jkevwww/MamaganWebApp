@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="/css/google_oauth.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body style="background: #0f172a;">
+<body class="admin-login-body">
   <div class="admin-login-wrapper">
     <div class="admin-login-card">
-      <div class="text-center" style="margin-bottom: 2rem;">
+      <div class="text-center admin-login-logo-block">
         <img src="/admin-logo.svg" alt="Mamagan Admin" height="40">
       </div>
       
@@ -24,11 +24,11 @@
 
       <form id="adminLoginForm" novalidate>
         <div class="form-group">
-          <label for="email"><i data-lucide="shield" style="width:14px; margin-right:5px;"></i> Admin Email</label>
+          <label for="email"><i data-lucide="shield" class="admin-login-label-icon"></i> Admin Email</label>
           <input type="email" id="email" placeholder="admin@mamagan.com" required />
         </div>
         <div class="form-group">
-          <label for="password"><i data-lucide="key" style="width:14px; margin-right:5px;"></i> Password</label>
+          <label for="password"><i data-lucide="key" class="admin-login-label-icon"></i> Password</label>
           <input type="password" id="password" placeholder="••••••••" required />
         </div>
         <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Authenticate</button>
@@ -47,9 +47,9 @@
         <a class="btn btn-github btn-block" href="/api/auth/github">Continue with GitHub</a>
       </div>
       
-      <div class="text-center" style="margin-top: 1.5rem;">
-        <a href="/" style="font-size: 0.85rem; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
-          <i data-lucide="arrow-left" style="width: 14px;"></i> Back to Main Site
+      <div class="text-center admin-login-back-wrap">
+        <a href="/" class="admin-login-back-link">
+          <i data-lucide="arrow-left" class="admin-login-back-icon"></i> Back to Main Site
         </a>
       </div>
     </div>

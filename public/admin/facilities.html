@@ -22,7 +22,7 @@
         <i data-lucide="search" aria-hidden="true"></i>
         <input type="text" id="facilitySearch" placeholder="Search facilities..." />
       </div>
-      <select id="categoryFilter" class="form-select" style="max-width:220px;">
+      <select id="categoryFilter" class="form-select facility-category-filter" aria-label="Filter by category">
         <option value="">All Categories</option>
         <option value="COTTAGE">Cottages</option>
         <option value="CABANA">Cabanas</option>
@@ -170,8 +170,8 @@
             </div>
           </div>
           <div id="imagePreviewContainer" class="image-preview-box">
-             <p class="text-muted" style="font-size:0.85rem;">Image Preview</p>
-             <img id="imagePreview" src="/mamagan-logo.svg" alt="Preview" style="display: none;">
+             <p class="text-muted">Image Preview</p>
+             <img id="imagePreview" src="/mamagan-logo.svg" alt="Preview">
           </div>
         </div>
 
@@ -181,7 +181,7 @@
            <label><input type="checkbox" id="restricted_during_peak_hours" name="restricted_during_peak_hours" value="1"> Peak hour restricted</label>
         </div>
 
-        <div class="form-group" style="margin-top: 1rem;">
+        <div class="form-group form-group-unavailable">
           <label for="unavailable_reason">Unavailable reason (if unbookable)</label>
           <input class="form-control" type="text" id="unavailable_reason" name="unavailable_reason">
         </div>

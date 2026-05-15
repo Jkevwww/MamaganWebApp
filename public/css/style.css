@@ -1237,6 +1237,65 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   font-size: 0.82rem;
 }
 
+.ticket-page--framed {
+  min-height: 0;
+  padding: 0 0 2.5rem;
+}
+
+/* Payment result when shown under global navbar + .page-content */
+.payment-result-page--framed {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+@media print {
+  .print-hidden {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .page-content {
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+
+  .ticket-page {
+    padding: 0.25rem 0 0;
+    min-height: auto;
+    background: #fff !important;
+  }
+
+  .ticket-page .container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .ticket-card-shell {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  .ticket-qr-frame {
+    border-color: #bbb !important;
+    background: #fff !important;
+  }
+
+  .ticket-kv-panel {
+    border-color: #ddd !important;
+  }
+
+  .ticket-card-header {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
 /* ─── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .hero { text-align: center; justify-content: center; }

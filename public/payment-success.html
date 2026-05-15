@@ -10,7 +10,21 @@
 </head>
 <body>
 
-  <div class="payment-result-page">
+  <header class="navbar print-hidden">
+    <div class="brand">
+      <a href="/"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
+    </div>
+    <nav>
+      <a href="/facilities.html">Facilities</a>
+      <a href="/my-bookings.html" class="auth-only" style="display:none;">My Bookings</a>
+      <a href="#" id="navUser" class="text-muted" style="opacity:0.85;cursor:default;max-width:180px;overflow:hidden;text-overflow:ellipsis;"></a>
+      <button type="button" id="navLogout" class="btn btn-secondary btn-sm" style="display:none;">Logout</button>
+      <a href="/login.html" class="btn btn-primary btn-sm guest-only">Login</a>
+    </nav>
+  </header>
+
+  <main class="page-content">
+    <div class="payment-result-page payment-result-page--framed">
     <div class="payment-result-inner">
       <div id="loadingState">
         <div class="result-card">
@@ -41,7 +55,7 @@
           </div>
         </div>
 
-        <div id="mockBanner" class="dev-banner" style="display: none;">
+        <div id="mockBanner" class="dev-banner print-hidden" style="display: none;">
           <p><strong>Dev Note:</strong> This was a mock payment simulation.</p>
           <button type="button" id="simulateWebhookBtn" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">Simulate Webhook Confirm</button>
         </div>
@@ -55,13 +69,38 @@
         </div>
       </div>
     </div>
-  </div>
+    </div>
+  </main>
 
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <script>
     const bookingId = new URLSearchParams(window.location.search).get('booking_id');
     const isMock = new URLSearchParams(window.location.search).get('mock') === 'true';
     let pollCount = 0;
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (res.ok) {
+          const user = await res.json();
+          const navUser = document.getElementById('navUser');
+          if (navUser) navUser.textContent = user.name || '';
+          document.querySelectorAll('.auth-only').forEach(el => { el.style.display = ''; });
+          document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
+          const lo = document.getElementById('navLogout');
+          if (lo) lo.style.display = 'inline-block';
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById('navLogout')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      } catch (_) {}
+      localStorage.clear();
+      window.location.replace('/');
+    });
 
     async function checkStatus() {
       if (!bookingId) {
@@ -145,6 +184,7 @@
       }
     });
 
+    checkAuth();
     checkStatus();
     lucide.createIcons();
   </script>

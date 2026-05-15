@@ -10,26 +10,65 @@
 </head>
 <body>
 
-  <div class="payment-result-page">
-    <div class="payment-result-inner" style="max-width:500px;">
-      <div class="result-card">
-        <div class="result-icon-circle result-icon-circle--danger">
-          <i data-lucide="x-circle" style="width:48px;height:48px;"></i>
-        </div>
+  <header class="navbar print-hidden">
+    <div class="brand">
+      <a href="/"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
+    </div>
+    <nav>
+      <a href="/facilities.html">Facilities</a>
+      <a href="/my-bookings.html" class="auth-only" style="display:none;">My Bookings</a>
+      <a href="#" id="navUser" class="text-muted" style="opacity:0.85;cursor:default;max-width:180px;overflow:hidden;text-overflow:ellipsis;"></a>
+      <button type="button" id="navLogout" class="btn btn-secondary btn-sm" style="display:none;">Logout</button>
+      <a href="/login.html" class="btn btn-primary btn-sm guest-only">Login</a>
+    </nav>
+  </header>
 
-        <h1 style="color:var(--color-danger);margin-bottom:0.75rem;font-size:1.65rem;">Payment Cancelled</h1>
-        <p class="text-muted" style="margin-bottom:2rem;">The payment process was cancelled. Your reservation is still pending but not yet confirmed.</p>
+  <main class="page-content">
+    <div class="payment-result-page payment-result-page--framed">
+      <div class="payment-result-inner" style="max-width:500px;">
+        <div class="result-card">
+          <div class="result-icon-circle result-icon-circle--danger">
+            <i data-lucide="x-circle" style="width:48px;height:48px;"></i>
+          </div>
 
-        <div style="display:flex;gap:0.75rem;flex-direction:column;">
-          <a id="retryBtn" href="#" class="btn btn-primary btn-block">Retry Payment</a>
-          <a href="/my-bookings.html" class="btn btn-secondary btn-block">Back to My Bookings</a>
+          <h1 style="color:var(--color-danger);margin-bottom:0.75rem;font-size:1.65rem;">Payment Cancelled</h1>
+          <p class="text-muted" style="margin-bottom:2rem;">The payment process was cancelled. Your reservation is still pending but not yet confirmed.</p>
+
+          <div style="display:flex;gap:0.75rem;flex-direction:column;">
+            <a id="retryBtn" href="#" class="btn btn-primary btn-block">Retry Payment</a>
+            <a href="/my-bookings.html" class="btn btn-secondary btn-block">Back to My Bookings</a>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </main>
 
   <script>
     const bookingId = new URLSearchParams(window.location.search).get('booking_id');
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (res.ok) {
+          const user = await res.json();
+          const navUser = document.getElementById('navUser');
+          if (navUser) navUser.textContent = user.name || '';
+          document.querySelectorAll('.auth-only').forEach(el => { el.style.display = ''; });
+          document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
+          const lo = document.getElementById('navLogout');
+          if (lo) lo.style.display = 'inline-block';
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById('navLogout')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      } catch (_) {}
+      localStorage.clear();
+      window.location.replace('/');
+    });
 
     if (bookingId) {
       document.getElementById('retryBtn').href = `/booking-details.html?id=${encodeURIComponent(bookingId)}`;
@@ -37,6 +76,7 @@
       document.getElementById('retryBtn').href = '/my-bookings.html';
     }
 
+    checkAuth();
     lucide.createIcons();
   </script>
 </body>
