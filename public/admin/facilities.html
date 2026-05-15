@@ -24,34 +24,65 @@
 
   <div id="facilityAlert" class="facility-alert" role="status" aria-live="polite"></div>
 
-  <section class="toolbar facilities-toolbar" aria-label="Facility filters">
-    <div class="search-field facility-search-field">
-      <i data-lucide="search" aria-hidden="true"></i>
-      <input type="search" id="facilitySearch" placeholder="Search facilities..." autocomplete="off">
+  <section class="toolbar facilities-toolbar admin-facilities-toolbar" aria-label="Facility search">
+    <div class="facility-search-actions admin-facility-search-actions">
+      <div class="search-field facility-search-field">
+        <img class="search-field-icon" src="/assets/icons/search.svg" alt="" aria-hidden="true">
+        <input type="search" id="facilitySearch" placeholder="Search facilities..." autocomplete="off">
+      </div>
+      <button type="button" id="adminFilterToggle" class="btn btn-secondary filter-toggle-button" aria-expanded="false" aria-controls="adminFiltersPanel">
+        <img src="/assets/icons/filter.svg" alt="" aria-hidden="true">
+        Filters
+      </button>
     </div>
-    <select id="categoryFilter" class="form-select" aria-label="Category filter">
-      <option value="">All categories</option>
-      <option value="COTTAGE">Cottages</option>
-      <option value="CABANA">Rooms / Cabanas</option>
-      <option value="BEACH_EQUIPMENT">Beach Equipment</option>
-    </select>
-    <select id="sizeFilter" class="form-select" aria-label="Size filter">
-      <option value="">All sizes</option>
-      <option value="SMALL">Small</option>
-      <option value="MEDIUM">Medium</option>
-      <option value="LARGE">Large</option>
-      <option value="EXTRA_LARGE">Extra Large</option>
-    </select>
-    <select id="activeFilter" class="form-select" aria-label="Active status filter">
-      <option value="">All active statuses</option>
-      <option value="1">Active</option>
-      <option value="0">Inactive</option>
-    </select>
-    <select id="bookableFilter" class="form-select" aria-label="Bookable status filter">
-      <option value="">All bookable statuses</option>
-      <option value="1">Bookable</option>
-      <option value="0">Not Bookable</option>
-    </select>
+
+    <div class="admin-facility-filter-popover" id="adminFiltersPanel" aria-label="Facility filters">
+      <div class="admin-filter-title">
+        <img src="/assets/icons/filter.svg" alt="" aria-hidden="true">
+        <span>Filters</span>
+      </div>
+      <div class="facility-admin-filter-grid">
+        <div class="filter-group">
+          <label for="categoryFilter">Category</label>
+          <select id="categoryFilter" class="form-select" aria-label="Category filter">
+            <option value="">All categories</option>
+            <option value="COTTAGE">Cottages</option>
+            <option value="CABANA">Rooms / Cabanas</option>
+            <option value="BEACH_EQUIPMENT">Beach Equipment</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="sizeFilter">Size</label>
+          <select id="sizeFilter" class="form-select" aria-label="Size filter">
+            <option value="">All sizes</option>
+            <option value="SMALL">Small</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LARGE">Large</option>
+            <option value="EXTRA_LARGE">Extra Large</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="activeFilter">Status</label>
+          <select id="activeFilter" class="form-select" aria-label="Active status filter">
+            <option value="">All statuses</option>
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="bookableFilter">Booking status</label>
+          <select id="bookableFilter" class="form-select" aria-label="Booking status filter">
+            <option value="">All booking statuses</option>
+            <option value="1">Bookable</option>
+            <option value="0">Not Bookable</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-filter-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="applyAdminFilters">Apply</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="resetAdminFilters">Reset</button>
+      </div>
+    </div>
   </section>
 
   <section class="table-card facilities-table-card">
@@ -227,8 +258,44 @@
     </div>
   </div>
 
+  <div class="modal-overlay delete-dialog-overlay" id="deleteConfirmModal" role="presentation">
+    <div class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle">
+      <dotlottie-wc
+        class="delete-dialog-lottie"
+        src="/assets/lottie/Delete.lottie"
+        style="width: 300px;height: 300px"
+        autoplay
+        loop>
+      </dotlottie-wc>
+      <h2 id="deleteConfirmTitle">Are you sure?</h2>
+      <p>This facility will be permanently deleted</p>
+      <div class="delete-dialog-actions">
+        <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+        <button type="button" class="btn btn-primary delete-confirm-button" id="confirmDeleteBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay delete-dialog-overlay" id="deleteSuccessModal" role="presentation">
+    <div class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteSuccessTitle">
+      <dotlottie-wc
+        class="delete-dialog-lottie"
+        src="/assets/lottie/Confirm.lottie"
+        style="width: 300px;height: 300px"
+        autoplay
+        loop>
+      </dotlottie-wc>
+      <h2 id="deleteSuccessTitle">Deleted</h2>
+      <p>Facilities has been deleted</p>
+      <div class="delete-dialog-actions delete-dialog-actions-center">
+        <button type="button" class="btn btn-primary" id="deleteSuccessOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/skeleton.js"></script>
   <script src="/assets/js/admin-layout.js"></script>
+  <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.14/dist/dotlottie-wc.js" type="module"></script>
   <script src="/assets/js/admin-facilities.js"></script>
 </body>
 </html>

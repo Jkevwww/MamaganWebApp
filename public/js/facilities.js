@@ -58,8 +58,7 @@ async function loadFacilities() {
 
   const category = document.getElementById('filterCategory').value;
   const capacity = document.getElementById('filterCapacity').value;
-  const minPrice = document.getElementById('filterMinPrice').value;
-  const maxPrice = document.getElementById('filterMaxPrice').value;
+  const { minPrice, maxPrice } = getSelectedPriceRange();
   const search = document.getElementById('searchInput').value.toLowerCase();
 
   let url = '/api/facilities?';
@@ -126,15 +125,33 @@ async function loadFacilities() {
 
 // ─── Event Listeners ────────────────────────────────────────────────────────
 
-document.getElementById('applyFilters').addEventListener('click', loadFacilities);
+document.getElementById('applyFilters').addEventListener('click', () => {
+  closeFiltersPanel();
+  loadFacilities();
+});
 document.getElementById('resetFilters').addEventListener('click', () => {
   document.getElementById('filterCategory').value = '';
   document.getElementById('filterCapacity').value = '';
-  document.getElementById('filterMinPrice').value = '';
-  document.getElementById('filterMaxPrice').value = '';
+  document.getElementById('filterPriceRange').value = '';
   document.getElementById('searchInput').value = '';
+  closeFiltersPanel();
   loadFacilities();
 });
+
+const filterToggle = document.getElementById('filterToggle');
+const filtersPanel = document.getElementById('filtersPanel');
+if (filterToggle && filtersPanel) {
+  filterToggle.addEventListener('click', () => {
+    const isOpen = filtersPanel.classList.toggle('open');
+    filterToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!filtersPanel.classList.contains('open')) return;
+    if (filtersPanel.contains(event.target) || filterToggle.contains(event.target)) return;
+    closeFiltersPanel();
+  });
+}
 
 let searchTimeout;
 document.getElementById('searchInput').addEventListener('input', () => {
@@ -149,6 +166,24 @@ function prettyCategory(cat) {
     'BEACH_EQUIPMENT': 'Equipment'
   };
   return map[cat] || cat;
+}
+
+function getSelectedPriceRange() {
+  const value = document.getElementById('filterPriceRange')?.value || '';
+  if (!value) return { minPrice: '', maxPrice: '' };
+  const [min, max] = value.split('-');
+  return {
+    minPrice: min || '',
+    maxPrice: max || '',
+  };
+}
+
+function closeFiltersPanel() {
+  const panel = document.getElementById('filtersPanel');
+  const toggle = document.getElementById('filterToggle');
+  if (!panel || !toggle) return;
+  panel.classList.remove('open');
+  toggle.setAttribute('aria-expanded', 'false');
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

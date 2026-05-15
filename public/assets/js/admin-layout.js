@@ -4,16 +4,16 @@
  */
 (function () {
   const sidebarLinks = [
-    { name: 'Dashboard', path: '/admin/dashboard.html', icon: 'layout-dashboard' },
-    { name: 'Manage Facilities', path: '/admin/facilities.html', icon: 'palmtree' },
-    { name: 'Rates & Promos', path: '/admin/rates.html', icon: 'tags' },
-    { name: 'Calendar', path: '/admin/calendar.html', icon: 'calendar' },
-    { name: 'Bookings', path: '/admin/bookings.html', icon: 'book-open' },
-    { name: 'Check-in / QR', path: '/admin/check-in.html', icon: 'qr-code' },
-    { name: 'Reports', path: '/admin/reports.html', icon: 'bar-chart-3' },
-    { name: 'Clients / Users', path: '/admin/users.html', icon: 'users' },
-    { name: 'System Logs', path: '/admin/logs.html', icon: 'scroll-text' },
-    { name: 'Settings', path: '/admin/settings.html', icon: 'settings' },
+    { name: 'Dashboard', path: '/admin/dashboard.html', icon: 'dashboard-panel.svg' },
+    { name: 'Manage Facilities', path: '/admin/facilities.html', icon: 'apartment.svg' },
+    { name: 'Rates & Promos', path: '/admin/rates.html', icon: 'tags.svg' },
+    { name: 'Calendar', path: '/admin/calendar.html', icon: 'calendar.svg' },
+    { name: 'Bookings', path: '/admin/bookings.html', icon: 'book-alt.svg' },
+    { name: 'Check-In/QR', path: '/admin/check-in.html', icon: 'qr.svg' },
+    { name: 'Reports', path: '/admin/reports.html', icon: 'data-report.svg' },
+    { name: 'Clients/Users', path: '/admin/users.html', icon: 'target-audience.svg' },
+    { name: 'System Logs', path: '/admin/logs.html', icon: 'log-file.svg' },
+    { name: 'Settings', path: '/admin/settings.html', icon: 'settings.svg' },
   ];
 
   function getPageTitle(path) {
@@ -29,6 +29,38 @@
   function openSidebar() {
     document.getElementById('adminSidebar')?.classList.add('open');
     document.getElementById('sidebarOverlay')?.classList.add('visible');
+  }
+
+  function isMobileSidebar() {
+    return window.matchMedia('(max-width: 1024px)').matches;
+  }
+
+  function applySidebarCollapsed(collapsed) {
+    const wrapper = document.getElementById('admin-layout-injected');
+    const toggle = document.getElementById('sidebarCollapseToggle');
+    if (!wrapper) return;
+
+    wrapper.classList.toggle('sidebar-collapsed', collapsed && !isMobileSidebar());
+    if (toggle) {
+      toggle.setAttribute('aria-pressed', collapsed && !isMobileSidebar() ? 'true' : 'false');
+      toggle.setAttribute('title', collapsed && !isMobileSidebar() ? 'Expand sidebar' : 'Collapse sidebar');
+    }
+  }
+
+  function toggleSidebar() {
+    if (isMobileSidebar()) {
+      openSidebar();
+      return;
+    }
+
+    const wrapper = document.getElementById('admin-layout-injected');
+    const collapsed = !wrapper?.classList.contains('sidebar-collapsed');
+    try {
+      localStorage.setItem('adminSidebarCollapsed', collapsed ? '1' : '0');
+    } catch (_) {
+      // ignore storage failures
+    }
+    applySidebarCollapsed(collapsed);
   }
 
   const ADMIN_TIERS = new Set(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'VIEWER']);
@@ -83,10 +115,10 @@
           ${sidebarLinks
             .map(
               (link) => `
-            <a href="${link.path}" class="nav-link sidebar-link ${
+              <a href="${link.path}" class="nav-link sidebar-link ${
                 currentPath === link.path ? 'active' : ''
-              }">
-              <i data-lucide="${link.icon}" aria-hidden="true"></i>
+              }" title="${link.name}">
+              <img class="sidebar-link-icon" src="/assets/icons/${link.icon}" alt="" aria-hidden="true">
               <span>${link.name}</span>
             </a>
           `
@@ -106,8 +138,8 @@
       <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
       <header class="admin-topbar">
         <div class="topbar-left">
-          <button type="button" class="mobile-toggle mobile-menu-btn" id="sidebarOpen" aria-label="Open menu">
-            <i data-lucide="menu"></i>
+          <button type="button" class="sidebar-collapse-toggle" id="sidebarCollapseToggle" aria-label="Toggle sidebar" aria-pressed="false">
+            <img src="/assets/icons/menu-burger.svg" alt="" aria-hidden="true">
           </button>
           <h2 id="pageTitle">${getPageTitle(currentPath)}</h2>
         </div>
@@ -139,9 +171,26 @@
     wrapper.appendChild(main);
     document.body.appendChild(wrapper);
 
-    document.getElementById('sidebarOpen')?.addEventListener('click', openSidebar);
+    let collapsed = false;
+    try {
+      collapsed = localStorage.getItem('adminSidebarCollapsed') === '1';
+    } catch (_) {
+      collapsed = false;
+    }
+    applySidebarCollapsed(collapsed);
+
+    document.getElementById('sidebarCollapseToggle')?.addEventListener('click', toggleSidebar);
     document.getElementById('sidebarClose')?.addEventListener('click', closeSidebar);
     document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebar);
+    window.addEventListener('resize', () => {
+      let shouldCollapse = false;
+      try {
+        shouldCollapse = localStorage.getItem('adminSidebarCollapsed') === '1';
+      } catch (_) {
+        shouldCollapse = false;
+      }
+      applySidebarCollapsed(shouldCollapse);
+    });
 
     document.getElementById('adminLogout')?.addEventListener('click', async () => {
       try {

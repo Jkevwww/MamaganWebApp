@@ -32,9 +32,23 @@
       </header>
       <div class="alert alert-error" id="pageAlert"></div>
 
-      <div class="filters-layout">
-        <aside class="filters-panel" aria-label="Search filters">
-          <h3><i class="filters-title-icon" data-lucide="filter" aria-hidden="true"></i> Filters</h3>
+      <div class="facilities-browse-layout">
+        <div class="facilities-toolbar">
+          <h2 class="page-title browse-heading">Browse</h2>
+          <div class="facility-search-actions">
+            <div class="search-field facility-search-bar">
+              <img class="search-field-icon" src="/assets/icons/search.svg" alt="" aria-hidden="true">
+              <input type="search" id="searchInput" placeholder="Search facilities..." autocomplete="off">
+            </div>
+            <button type="button" id="filterToggle" class="btn btn-secondary filter-toggle-button" aria-expanded="false" aria-controls="filtersPanel">
+              <img src="/assets/icons/filter.svg" alt="" aria-hidden="true">
+              Filters
+            </button>
+          </div>
+        </div>
+
+        <aside class="filters-panel facilities-filter-popover" id="filtersPanel" aria-label="Search filters">
+          <h3><img class="filters-title-icon" src="/assets/icons/filter.svg" alt="" aria-hidden="true"> Filters</h3>
 
           <div class="filter-group">
             <label for="filterCategory">Category</label>
@@ -53,27 +67,21 @@
 
           <div class="filter-group">
             <label>Price range (₱)</label>
-            <div class="form-grid-2">
-              <input class="form-control" type="number" id="filterMinPrice" placeholder="Min" min="0">
-              <input class="form-control" type="number" id="filterMaxPrice" placeholder="Max" min="0">
-            </div>
+            <select id="filterPriceRange" class="form-select">
+              <option value="">Any price</option>
+              <option value="0-500">Up to ₱500</option>
+              <option value="501-1500">₱501 - ₱1,500</option>
+              <option value="1501-3000">₱1,501 - ₱3,000</option>
+              <option value="3001-6000">₱3,001 - ₱6,000</option>
+              <option value="6001-">Above ₱6,000</option>
+            </select>
           </div>
 
           <button type="button" id="applyFilters" class="btn btn-primary btn-block">Apply filters</button>
           <button type="button" id="resetFilters" class="btn btn-outline btn-block filter-reset-button">Reset</button>
         </aside>
 
-        <div class="filters-main">
-          <div class="facilities-toolbar">
-            <h2 class="page-title browse-heading">Browse</h2>
-            <div class="search-field">
-              <i data-lucide="search" aria-hidden="true"></i>
-              <input type="search" id="searchInput" placeholder="Search facilities..." autocomplete="off">
-            </div>
-          </div>
-
-          <div class="facility-grid" id="facilityGrid" aria-live="polite"></div>
-        </div>
+        <div class="facility-grid" id="facilityGrid" aria-live="polite"></div>
       </div>
     </div>
   </main>

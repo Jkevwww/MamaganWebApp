@@ -423,7 +423,8 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   max-width: 280px;
 }
 .search-field i,
-.search-field svg {
+.search-field svg,
+.search-field-icon {
   position: absolute;
   left: 10px;
   top: 50%;
@@ -432,6 +433,10 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   height: 16px;
   color: var(--color-muted);
   pointer-events: none;
+}
+.search-field-icon {
+  object-fit: contain;
+  opacity: 0.62;
 }
 .search-field input {
   width: 100%;
@@ -499,6 +504,10 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   flex-wrap: wrap;
 }
 
+.facilities-browse-layout {
+  position: relative;
+}
+
 .filters-panel {
   width: 100%;
   max-width: 270px;
@@ -508,6 +517,27 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--color-border);
+}
+
+.facilities-filter-popover {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 64px;
+  z-index: 50;
+  max-width: 340px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+  transform: translateY(-8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.facilities-filter-popover.open {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .filters-panel h3 {
@@ -550,14 +580,80 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.facilities-toolbar .browse-heading {
+  margin-right: auto;
+}
+
+.facility-search-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex: 0 1 auto;
+}
+
+.facility-search-bar {
+  width: min(34vw, 320px);
+  min-width: 240px;
+  max-width: 320px;
+  flex: 0 0 auto;
+}
+
+.filter-toggle-button {
+  min-height: 42px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.filter-toggle-button img {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+}
+
+.facilities-filter-popover #applyFilters,
+.facilities-filter-popover #resetFilters {
+  min-height: 44px;
+  font-size: 0.95rem;
+  padding: 0.72rem 1rem;
 }
 
 @media (max-width: 768px) {
   .filters-layout { flex-direction: column; }
   .filters-panel { max-width: none; }
+  .facilities-toolbar {
+    align-items: stretch;
+  }
+  .facility-search-actions {
+    flex-basis: 100%;
+    justify-content: stretch;
+  }
+  .facility-search-bar {
+    max-width: none;
+  }
+  .facilities-filter-popover {
+    position: static;
+    max-width: none;
+    width: 100%;
+    margin-bottom: 1.25rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .facility-search-actions {
+    flex-wrap: wrap;
+  }
+  .filter-toggle-button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* ─── Facility cards ─────────────────────────────────────────────────────────── */

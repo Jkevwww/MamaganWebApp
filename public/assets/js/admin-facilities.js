@@ -6,6 +6,7 @@
     facilities: [],
     loading: false,
     editingId: null,
+    deleteConfirmResolver: null,
   };
 
   const els = {};
@@ -15,6 +16,8 @@
   function init() {
     [
       'facilityAlert', 'facilitySearch', 'categoryFilter', 'sizeFilter', 'activeFilter', 'bookableFilter',
+      'adminFilterToggle', 'adminFiltersPanel', 'applyAdminFilters', 'resetAdminFilters',
+      'deleteConfirmModal', 'deleteSuccessModal', 'cancelDeleteBtn', 'confirmDeleteBtn', 'deleteSuccessOkBtn',
       'facilitiesTbody', 'facilityModal', 'facilityForm', 'facilityId', 'modalTitle', 'modalSubtitle',
       'addFacilityBtn', 'closeModal', 'cancelBtn', 'saveBtn', 'uploadImageBtn', 'clearImageBtn',
       'name', 'category', 'size', 'description', 'image_url', 'image_file', 'imagePreview',
@@ -41,6 +44,7 @@
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && els.facilityModal.classList.contains('open')) closeModal();
+      if (event.key === 'Escape' && els.deleteConfirmModal.classList.contains('open')) closeDeleteConfirm(false);
     });
 
     let searchTimer;
@@ -51,6 +55,17 @@
     [els.categoryFilter, els.sizeFilter, els.activeFilter, els.bookableFilter].forEach((el) => {
       el.addEventListener('change', loadFacilities);
     });
+    els.adminFilterToggle.addEventListener('click', toggleFiltersPanel);
+    els.applyAdminFilters.addEventListener('click', () => {
+      closeFiltersPanel();
+      loadFacilities();
+    });
+    els.resetAdminFilters.addEventListener('click', resetFilters);
+    document.addEventListener('click', (event) => {
+      if (!els.adminFiltersPanel.classList.contains('open')) return;
+      if (els.adminFiltersPanel.contains(event.target) || els.adminFilterToggle.contains(event.target)) return;
+      closeFiltersPanel();
+    });
 
     els.category.addEventListener('change', updateCategoryFields);
     els.bookable.addEventListener('change', updateCategoryFields);
@@ -59,6 +74,15 @@
     els.clearImageBtn.addEventListener('click', clearImage);
     els.uploadImageBtn.addEventListener('click', uploadImageOnly);
     els.facilityForm.addEventListener('submit', submitFacility);
+    els.cancelDeleteBtn.addEventListener('click', () => closeDeleteConfirm(false));
+    els.confirmDeleteBtn.addEventListener('click', () => closeDeleteConfirm(true));
+    els.deleteConfirmModal.addEventListener('click', (event) => {
+      if (event.target === els.deleteConfirmModal) closeDeleteConfirm(false);
+    });
+    els.deleteSuccessOkBtn.addEventListener('click', closeDeleteSuccess);
+    els.deleteSuccessModal.addEventListener('click', (event) => {
+      if (event.target === els.deleteSuccessModal) closeDeleteSuccess();
+    });
   }
 
   async function loadFacilities() {
@@ -81,6 +105,25 @@
     } finally {
       state.loading = false;
     }
+  }
+
+  function toggleFiltersPanel() {
+    const isOpen = els.adminFiltersPanel.classList.toggle('open');
+    els.adminFilterToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  }
+
+  function closeFiltersPanel() {
+    els.adminFiltersPanel.classList.remove('open');
+    els.adminFilterToggle.setAttribute('aria-expanded', 'false');
+  }
+
+  function resetFilters() {
+    els.categoryFilter.value = '';
+    els.sizeFilter.value = '';
+    els.activeFilter.value = '';
+    els.bookableFilter.value = '';
+    closeFiltersPanel();
+    loadFacilities();
   }
 
   function renderLoading() {
@@ -142,16 +185,16 @@
         <td>
           <div class="table-action-row">
             <button type="button" class="btn-sm btn-view" data-action="view" data-id="${facility.id}" title="View">
-              <i class="icon-xs" data-lucide="eye"></i><span>View</span>
+              <img class="action-icon" src="/assets/icons/overview.svg" alt="" aria-hidden="true"><span>View</span>
             </button>
             <button type="button" class="btn-sm btn-approve" data-action="edit" data-id="${facility.id}" title="Edit">
-              <i class="icon-xs" data-lucide="edit-2"></i><span>Edit</span>
+              <img class="action-icon" src="/assets/icons/file-edit.svg" alt="" aria-hidden="true"><span>Edit</span>
             </button>
             <button type="button" class="btn-sm btn-toggle" data-action="toggle" data-id="${facility.id}" title="${Number(facility.active) ? 'Disable' : 'Enable'}">
-              <i class="icon-xs" data-lucide="${Number(facility.active) ? 'pause-circle' : 'play-circle'}"></i><span>${Number(facility.active) ? 'Disable' : 'Enable'}</span>
+              <img class="action-icon" src="/assets/icons/ban.svg" alt="" aria-hidden="true"><span>${Number(facility.active) ? 'Disable' : 'Enable'}</span>
             </button>
             <button type="button" class="btn-sm btn-cancel" data-action="delete" data-id="${facility.id}" title="Delete">
-              <i class="icon-xs" data-lucide="trash-2"></i><span>Delete</span>
+              <img class="action-icon" src="/assets/icons/trash.svg" alt="" aria-hidden="true"><span>Delete</span>
             </button>
           </div>
         </td>
@@ -377,15 +420,40 @@
   }
 
   async function deleteFacility(facility) {
-    if (!confirm(`Soft delete "${facility.name}"? Existing bookings will remain intact.`)) return;
+    const confirmed = await confirmDeleteFacility();
+    if (!confirmed) return;
 
     try {
       await apiFetch(`${API_BASE}/${facility.id}`, { method: 'DELETE' });
-      showAlert('Facility deleted successfully.', 'success');
       await loadFacilities();
+      openDeleteSuccess();
     } catch (err) {
       showAlert(err.message, 'error');
     }
+  }
+
+  function confirmDeleteFacility() {
+    return new Promise((resolve) => {
+      state.deleteConfirmResolver = resolve;
+      els.deleteConfirmModal.classList.add('open');
+      els.confirmDeleteBtn.disabled = false;
+    });
+  }
+
+  function closeDeleteConfirm(result = false) {
+    els.deleteConfirmModal.classList.remove('open');
+    if (state.deleteConfirmResolver) {
+      state.deleteConfirmResolver(result);
+      state.deleteConfirmResolver = null;
+    }
+  }
+
+  function openDeleteSuccess() {
+    els.deleteSuccessModal.classList.add('open');
+  }
+
+  function closeDeleteSuccess() {
+    els.deleteSuccessModal.classList.remove('open');
   }
 
   async function uploadImageOnly() {
