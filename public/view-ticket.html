@@ -6,19 +6,20 @@
   <title>Your Ticket - Mamagan</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/styles.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
   <header class="navbar print-hidden">
     <div class="brand">
-      <a href="/"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
+      <a href="/" aria-label="Mamagan home"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
     </div>
     <nav>
       <a href="/facilities.html">Facilities</a>
-      <a href="/my-bookings.html" class="auth-only" style="display:none;">My Bookings</a>
-      <a href="#" id="navUser" class="text-muted" style="opacity:0.85;cursor:default;max-width:180px;overflow:hidden;text-overflow:ellipsis;"></a>
-      <button type="button" id="navLogout" class="btn btn-secondary btn-sm" style="display:none;">Logout</button>
+      <a href="/my-bookings.html" class="auth-only is-hidden">My Bookings</a>
+      <a href="#" id="navUser" aria-label="User profile" class="text-muted nav-user"></a>
+      <button type="button" id="navLogout" class="btn btn-secondary btn-sm is-hidden">Logout</button>
       <a href="/login.html" class="btn btn-primary btn-sm guest-only">Login</a>
     </nav>
   </header>
@@ -27,7 +28,7 @@
     <div class="ticket-page ticket-page--framed">
       <div class="container narrow-container">
         <div class="ticket-brand">
-          <a href="/"><img src="/mamagan-logo.svg" alt="Mamagan Logo" height="56"></a>
+          <a href="/" aria-label="Mamagan home"><img src="/mamagan-logo.svg" alt="Mamagan Logo" height="56"></a>
         </div>
 
         <div class="ticket-card-shell">
@@ -38,7 +39,7 @@
 
           <div class="ticket-card-body">
             <div id="qr-container" class="ticket-qr-frame">
-              <i data-lucide="qr-code" style="width:140px;height:140px;color:#334155;"></i>
+              <i class="icon-ticket-qr" data-lucide="qr-code"></i>
             </div>
 
             <div class="ticket-kv-panel">
@@ -62,10 +63,10 @@
           </div>
 
           <div class="ticket-card-footer print-hidden">
-            <button type="button" id="printTicketBtn" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:0.5rem;">
-              <i data-lucide="printer" style="width:18px;"></i> Print Ticket
+            <button type="button" id="printTicketBtn" class="btn btn-primary inline-action">
+              <i class="icon-md" data-lucide="printer"></i> Print Ticket
             </button>
-            <a href="/my-bookings.html" class="text-muted" style="display:block;margin-top:1rem;text-align:center;font-size:0.92rem;">Back to My Bookings</a>
+            <a href="/my-bookings.html" class="text-muted ticket-back-link">Back to My Bookings</a>
           </div>
         </div>
 
@@ -82,7 +83,7 @@
           const user = await res.json();
           const navUser = document.getElementById('navUser');
           if (navUser) navUser.textContent = user.name || '';
-          document.querySelectorAll('.auth-only').forEach(el => { el.style.display = ''; });
+          document.querySelectorAll('.auth-only').forEach(el => { el.classList.remove('is-hidden'); el.style.display = ''; });
           document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
           const lo = document.getElementById('navLogout');
           if (lo) lo.style.display = 'inline-block';

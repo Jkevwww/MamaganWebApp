@@ -55,7 +55,7 @@ async function loadMyBookings() {
       tbody.innerHTML = `<tr><td colspan="5">
         <div class="empty-state">
           <p>You have no bookings yet.</p>
-          <p style="margin-top:1rem;"><a href="/facilities.html" class="btn btn-primary">Browse facilities</a></p>
+          <p class="filter-reset-button"><a href="/facilities.html" class="btn btn-primary">Browse facilities</a></p>
         </div>
       </td></tr>`;
       return;
@@ -64,14 +64,14 @@ async function loadMyBookings() {
     tbody.innerHTML = bookings.map((b) => `
       <tr>
         <td>
-          <div style="font-weight:600; color: var(--primary);">${escHtml(b.facility_name)}</div>
-          <div style="font-size: 0.75rem; color: #64748b;">${b.quantity} unit(s) • ${b.guest_count} pax</div>
+          <div class="text-primary-strong">${escHtml(b.facility_name)}</div>
+          <div class="facility-thumb-meta">${b.quantity} unit(s) • ${b.guest_count} pax</div>
         </td>
         <td>${new Date(b.date).toLocaleDateString()}</td>
         <td>${b.start_time.substring(0,5)} - ${b.end_time.substring(0,5)}</td>
         <td>
           <span class="status-badge ${getStatusClass(b.status)}">${escHtml(String(b.status).toUpperCase())}</span>
-          ${b.payment_status === 'pending' && b.status !== 'cancelled' ? '<br><small class="text-muted" style="font-weight:600;color:var(--color-accent)!important;">Payment pending</small>' : ''}
+          ${b.payment_status === 'pending' && b.status !== 'cancelled' ? '<br><small class="text-muted text-accent-pending">Payment pending</small>' : ''}
         </td>
         <td>
           <div class="table-actions">
@@ -79,7 +79,7 @@ async function loadMyBookings() {
             ${b.payment_status === 'paid' ? `
               <button type="button" class="btn btn-primary btn-sm" title="View QR ticket"
                 onclick="viewTicket(${b.id}, '${escHtml(b.facility_name)}', '${new Date(b.date).toLocaleDateString()}', '${b.start_time} - ${b.end_time}')">
-                <i data-lucide="qr-code" style="width:14px;" aria-hidden="true"></i> Ticket
+                <i class="icon-xs" data-lucide="qr-code" aria-hidden="true"></i> Ticket
               </button>
             ` : ''}
           </div>
@@ -90,7 +90,7 @@ async function loadMyBookings() {
     if (window.lucide) lucide.createIcons();
 
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 3rem; color: var(--error);">Error: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td class="table-error-centered" colspan="5">Error: ${err.message}</td></tr>`;
   }
 }
 

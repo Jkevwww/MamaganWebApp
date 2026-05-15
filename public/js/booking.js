@@ -45,12 +45,12 @@ async function loadFacility() {
 function renderFacilityInfo() {
   const header = document.getElementById('facilityHeader');
   header.innerHTML = `
-    <h1 style="color: var(--primary); margin-bottom: 0.5rem;">${escHtml(currentFacility.name)}</h1>
-    <p style="color: #64748b; font-size: 1.1rem; margin-bottom: 1.5rem;">${escHtml(currentFacility.description)}</p>
-    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-      <span class="badge" style="background:#fff7ed; color:#9a3412;"><i data-lucide="users" style="width:14px; height:14px; vertical-align:middle;"></i> Up to ${currentFacility.capacity_max} pax</span>
-      <span class="badge" style="background:#f0f9ff; color:#0369a1;"><i data-lucide="package" style="width:14px; height:14px; vertical-align:middle;"></i> ${currentFacility.inventory_count} units available</span>
-      <span class="badge" style="background:#f1f5f9; color:#64748b;">${currentFacility.category}</span>
+    <h1 class="text-primary-heading">${escHtml(currentFacility.name)}</h1>
+    <p class="booking-description">${escHtml(currentFacility.description)}</p>
+    <div class="booking-badge-row">
+      <span class="badge badge-warm"><i class="icon-xs-middle" data-lucide="users"></i> Up to ${currentFacility.capacity_max} pax</span>
+      <span class="badge badge-info"><i class="icon-xs-middle" data-lucide="package"></i> ${currentFacility.inventory_count} units available</span>
+      <span class="badge badge-muted">${currentFacility.category}</span>
     </div>
   `;
   
@@ -163,9 +163,9 @@ function calculateTotalDisplay(quantity, guestCount, startTime, endTime, booking
 
   document.getElementById('totalAmount').textContent = `₱${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   document.getElementById('summaryDetails').innerHTML = `
-    <div style="font-size: 0.9rem; color: #64748b;">
-      <div style="margin-bottom: 0.5rem;"><strong>${escHtml(currentFacility.name)}</strong></div>
-      <div style="line-height: 1.5;">${breakdown}</div>
+    <div class="summary-breakdown">
+      <div class="facility-price"><strong>${escHtml(currentFacility.name)}</strong></div>
+      <div class="summary-breakdown-lines">${breakdown}</div>
     </div>
   `;
 }
@@ -185,7 +185,7 @@ function setSubmitEnabled(enabled) {
 
 function resetTotal() {
   document.getElementById('totalAmount').textContent = '₱0.00';
-  document.getElementById('summaryDetails').innerHTML = '<p style="color: #777; font-size: 0.9rem;">Fill in the details to see the total amount.</p>';
+  document.getElementById('summaryDetails').innerHTML = '<p class="text-muted-small">Fill in the details to see the total amount.</p>';
 }
 
 function showError(title, msg) {

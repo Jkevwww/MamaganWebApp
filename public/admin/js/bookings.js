@@ -54,10 +54,10 @@
           (b) => `
         <tr data-status="${esc((b.status || '').toLowerCase())}" data-payment="${esc((b.payment_status || '').toLowerCase())}">
           <td>#${b.id}</td>
-          <td><div style="font-weight:600;">${esc(b.facility_name)}</div></td>
+          <td><div class="text-strong">${esc(b.facility_name)}</div></td>
           <td>
-            <div style="font-weight:600;">${esc(b.user_name)}</div>
-            <div class="text-muted" style="font-size:0.78rem;">${esc(b.user_email)}</div>
+            <div class="text-strong">${esc(b.user_name)}</div>
+            <div class="text-muted small-muted">${esc(b.user_email)}</div>
           </td>
           <td>${esc(b.date)}</td>
           <td>${String(b.start_time).slice(0, 5)} – ${String(b.end_time).slice(0, 5)}</td>
@@ -68,7 +68,7 @@
         )
         .join('');
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding:2rem;color:var(--color-danger);">${esc(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center table-error">${esc(err.message)}</td></tr>`;
     }
     if (window.lucide) lucide.createIcons();
   }

@@ -25,38 +25,38 @@
       allFacilities = await res.json();
       renderFacilities(allFacilities);
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:var(--error); padding:2rem;">Error: ${err.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center table-error">Error: ${err.message}</td></tr>`;
     }
   }
 
   function renderFacilities(facilities) {
     const tbody = document.getElementById('facilitiesTbody');
     if (facilities.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:2rem; color:#94a3b8;">No facilities found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center empty-state-muted">No facilities found.</td></tr>';
       return;
     }
 
     tbody.innerHTML = facilities.map(f => `
       <tr>
-        <td><img src="${f.image_url || '/mamagan-logo.svg'}" style="width:50px; height:50px; object-fit:cover; border-radius:6px;"></td>
+        <td><img class="admin-facility-thumb" src="${f.image_url || '/mamagan-logo.svg'}"></td>
         <td>
-          <div style="font-weight:600;">${escHtml(f.name)}</div>
-          <div style="font-size:0.75rem; color:#64748b;">${escHtml(f.size)}</div>
+          <div class="text-strong">${escHtml(f.name)}</div>
+          <div class="facility-thumb-meta">${escHtml(f.size)}</div>
         </td>
-        <td><span class="badge" style="background:#f1f5f9; color:#64748b;">${f.category}</span></td>
+        <td><span class="badge badge-muted">${f.category}</span></td>
         <td>
-           <div style="font-weight:600;">₱${(f.day_rate_min || f.price_min || 0).toLocaleString()}</div>
-           <div style="font-size:0.7rem; color:#94a3b8;">${f.rental_type}</div>
+           <div class="text-strong">₱${(f.day_rate_min || f.price_min || 0).toLocaleString()}</div>
+           <div class="admin-rate-meta">${f.rental_type}</div>
         </td>
         <td>${f.inventory_count} unit(s)</td>
         <td>
           <span class="badge ${f.active ? 'status-approved' : 'status-cancelled'}">${f.active ? 'ACTIVE' : 'INACTIVE'}</span>
-          ${!f.bookable ? '<br><small style="color:var(--error); font-size:10px;">UNBOOKABLE</small>' : ''}
+          ${!f.bookable ? '<br><small class="text-error-tiny">UNBOOKABLE</small>' : ''}
         </td>
         <td>
-          <div style="display:flex; gap:0.5rem;">
-            <button class="btn-sm btn-approve" onclick="editFacility(${f.id})" title="Edit"><i data-lucide="edit-2" style="width:14px;"></i></button>
-            <button class="btn-sm btn-cancel" onclick="deleteFacility(${f.id})" title="Delete"><i data-lucide="trash-2" style="width:14px;"></i></button>
+          <div class="table-action-row">
+            <button class="btn-sm btn-approve" onclick="editFacility(${f.id})" title="Edit"><i class="icon-xs" data-lucide="edit-2"></i></button>
+            <button class="btn-sm btn-cancel" onclick="deleteFacility(${f.id})" title="Delete"><i class="icon-xs" data-lucide="trash-2"></i></button>
           </div>
         </td>
       </tr>

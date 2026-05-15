@@ -6,13 +6,14 @@
   <title>Booking Details - Mamagan</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/styles.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
   <header class="navbar">
     <div class="brand">
-      <a href="/"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
+      <a href="/" aria-label="Mamagan home"><img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="40"></a>
     </div>
     <nav>
       <a href="/facilities.html">Facilities</a>
@@ -101,7 +102,7 @@
         renderDetails(b);
       } catch (err) {
         document.getElementById('detailsContent').innerHTML = `
-          <div class="booking-detail-body" style="padding:3rem;text-align:center;">
+          <div class="booking-detail-body empty-state-centered">
             <i data-lucide="alert-circle" class="icon-large icon-danger"></i>
             <h3>Error loading details</h3>
             <p class="text-muted">${escHtml(err.message)}</p>
@@ -165,19 +166,19 @@
 
           <div class="payment-summary-panel">
             <h4>Payment Summary</h4>
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+            <div class="payment-summary-row">
               <div>
                 <div class="text-muted facility-subtitle">Total Amount</div>
                 <div class="facility-title">₱${Number(b.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
               </div>
-              <div style="text-align:right;">
+              <div class="payment-status-block">
                 <div class="text-muted facility-subtitle">Payment Status</div>
-                <span class="status-badge ${payClass}" style="margin-top:0.35rem;display:inline-block;">${escHtml(String(b.payment_status || '').toUpperCase())}</span>
+                <span class="status-badge ${payClass} payment-status-badge">${escHtml(String(b.payment_status || '').toUpperCase())}</span>
               </div>
             </div>
             ${isPending ? `
               <div class="payment-alert">
-                <i data-lucide="clock" style="width:18px;flex-shrink:0;"></i>
+                <i class="payment-alert-icon" data-lucide="clock"></i>
                 <div>
                   <strong>Action Required:</strong> ${expiresLine}
                 </div>
@@ -187,17 +188,17 @@
 
           <div class="booking-actions-row">
             ${isPending ? `
-              <button type="button" id="payNowBtn" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:0.5rem;">
+              <button type="button" id="payNowBtn" class="btn btn-primary inline-action">
                 <i data-lucide="credit-card"></i> Pay Now via GCash
               </button>
             ` : ''}
             ${b.payment_status === 'paid' ? `
-              <a href="/view-ticket.html?id=${encodeURIComponent(b.id)}&facility=${encodeURIComponent(b.facility_name)}&date=${encodeURIComponent(new Date(b.date).toLocaleDateString())}&time=${encodeURIComponent(timeStart + ' - ' + timeEnd)}" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:0.5rem;">
+              <a href="/view-ticket.html?id=${encodeURIComponent(b.id)}&facility=${encodeURIComponent(b.facility_name)}&date=${encodeURIComponent(new Date(b.date).toLocaleDateString())}&time=${encodeURIComponent(timeStart + ' - ' + timeEnd)}" class="btn btn-primary inline-action">
                 <i data-lucide="qr-code"></i> View Digital Ticket
               </a>
             ` : ''}
             ${b.status === 'pending' || b.status === 'approved' ? `
-              <button type="button" id="cancelBookingBtn" class="btn btn-secondary" style="color:var(--color-danger);border-color:var(--color-danger);">Cancel Reservation</button>
+              <button type="button" id="cancelBookingBtn" class="btn btn-secondary text-danger-action">Cancel Reservation</button>
             ` : ''}
           </div>
         </div>

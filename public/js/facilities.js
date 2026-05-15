@@ -83,7 +83,7 @@ async function loadFacilities() {
     }
 
     if (facilities.length === 0) {
-      grid.innerHTML = '<div class="text-center" style="grid-column: 1/-1; padding: 3rem;"><p style="color:#777;">No facilities match your criteria.</p></div>';
+      grid.innerHTML = '<div class="text-center empty-state-spacious"><p class="text-muted-small">No facilities match your criteria.</p></div>';
       return;
     }
 
@@ -91,26 +91,26 @@ async function loadFacilities() {
       <div class="facility-card ${!f.bookable ? 'is-loading' : ''}">
         <img src="${f.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'}" alt="${f.name}" loading="lazy" />
         <div class="card-body">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <h3 style="margin:0;">${escHtml(f.name)}</h3>
-            <span class="badge" style="background: #f1f5f9; color: #64748b;">${prettyCategory(f.category)}</span>
+          <div class="facility-card-header-row">
+            <h3 class="facility-card-heading">${escHtml(f.name)}</h3>
+            <span class="badge badge-muted">${prettyCategory(f.category)}</span>
           </div>
-          <p class="meta" style="margin-top:0.5rem; height: 3rem; overflow: hidden; text-overflow: ellipsis;">${escHtml(f.description || 'Experience the beauty of Mamagan.')}</p>
-          <p class="price" style="margin-bottom:0.5rem;">
+          <p class="meta facility-description-clamp">${escHtml(f.description || 'Experience the beauty of Mamagan.')}</p>
+          <p class="price facility-price">
             ₱${Number(f.price_min).toLocaleString()}${f.price_max > f.price_min ? ' - ₱' + Number(f.price_max).toLocaleString() : ''}
-            <small style="color:#777; font-weight:normal;"> / ${f.rental_type === 'FIXED' ? 'session' : f.rental_type === 'DAILY' ? 'day' : 'hour'}</small>
+            <small class="muted-normal"> / ${f.rental_type === 'FIXED' ? 'session' : f.rental_type === 'DAILY' ? 'day' : 'hour'}</small>
           </p>
-          <div style="margin-bottom: 1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <div class="facility-badge-row">
              <span class="badge ${f.active && f.bookable ? 'badge-available' : 'badge-unavailable'}">
               ${f.active && f.bookable ? 'Available' : 'Unavailable'}
             </span>
-            <span class="badge" style="background:#fff7ed; color:#9a3412;"><i data-lucide="users" style="width:12px; height:12px; vertical-align:middle;"></i> ${f.capacity_min}-${f.capacity_max} pax</span>
-            <span class="badge" style="background:#f0f9ff; color:#0369a1;"><i data-lucide="package" style="width:12px; height:12px; vertical-align:middle;"></i> ${f.inventory_count} units</span>
+            <span class="badge badge-warm"><i class="icon-xxs" data-lucide="users"></i> ${f.capacity_min}-${f.capacity_max} pax</span>
+            <span class="badge badge-info"><i class="icon-xxs" data-lucide="package"></i> ${f.inventory_count} units</span>
           </div>
           
-          ${!f.bookable ? `<p style="color:var(--error); font-size:0.8rem; margin-bottom:1rem;">${f.unavailable_reason || 'Not bookable'}</p>` : ''}
+          ${!f.bookable ? `<p class="text-error-small">${f.unavailable_reason || 'Not bookable'}</p>` : ''}
 
-          <a href="/booking.html?id=${f.id}" class="btn ${f.bookable ? 'btn-primary' : 'btn-secondary'} btn-block" ${!f.bookable ? 'style="pointer-events:none; opacity:0.5;"' : ''}>
+          <a href="/booking.html?id=${f.id}" class="btn ${f.bookable ? 'btn-primary' : 'btn-secondary'} btn-block ${!f.bookable ? 'facility-card-disabled' : ''}">
             ${f.bookable ? 'Book Now' : 'Currently Unavailable'}
           </a>
         </div>
@@ -120,7 +120,7 @@ async function loadFacilities() {
     if (window.lucide) lucide.createIcons();
 
   } catch (err) {
-    grid.innerHTML = `<div class="text-center" style="grid-column: 1/-1; padding: 3rem;"><p style="color:#c62828;">Error: ${err.message}</p></div>`;
+    grid.innerHTML = `<div class="text-center empty-state-spacious"><p class="text-danger">Error: ${err.message}</p></div>`;
   }
 }
 

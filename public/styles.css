@@ -1,0 +1,520 @@
+/* Extracted inline HTML styles. Keep this file loaded after /css/style.css. */
+
+.auth-logo-block {
+  margin-bottom: 2rem;
+}
+
+.auth-helper-text {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.auth-switch-text {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  color: #777;
+}
+
+.auth-switch-text--spacious {
+  margin-top: 1.5rem;
+}
+
+.auth-switch-link {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.auth-nav-button {
+  padding: 0.4rem 1rem;
+}
+
+.auth-nav-logout {
+  padding: 0.4rem 1rem;
+  margin-left: 1rem;
+  display: none;
+}
+
+.nav-user {
+  opacity: 0.85;
+  cursor: default;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-user--compact {
+  max-width: 160px;
+}
+
+.is-hidden {
+  display: none;
+}
+
+.icon-xxs {
+  width: 12px;
+  height: 12px;
+  vertical-align: middle;
+}
+
+.icon-xs {
+  width: 14px;
+}
+
+.icon-xs-inline {
+  width: 14px;
+  margin-right: 5px;
+}
+
+.icon-xs-middle {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+}
+
+.icon-xs-primary {
+  width: 14px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.icon-sm {
+  width: 16px;
+}
+
+.icon-sm-square {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-sm-flex {
+  width: 18px;
+  flex-shrink: 0;
+}
+
+.icon-md {
+  width: 18px;
+}
+
+.icon-info-centered {
+  width: 22px;
+  height: 22px;
+  margin: 0 auto 0.5rem;
+  display: block;
+}
+
+.icon-result {
+  width: 48px;
+  height: 48px;
+}
+
+.icon-error-large {
+  width: 52px;
+  height: 52px;
+  color: var(--color-danger);
+  margin-bottom: 1rem;
+}
+
+.icon-ticket-preview {
+  width: 100px;
+  height: 100px;
+  color: #334155;
+  margin-bottom: 0.75rem;
+}
+
+.icon-ticket-qr {
+  width: 140px;
+  height: 140px;
+  color: #334155;
+}
+
+.lottie-hero {
+  width: 100%;
+  height: 300px;
+}
+
+.lottie-pending {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+}
+
+.badge-muted {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.badge-warm {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.badge-info {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.muted-normal {
+  color: #777;
+  font-weight: normal;
+}
+
+.text-muted-small {
+  color: #777;
+  font-size: 0.9rem;
+}
+
+.text-danger {
+  color: #c62828;
+}
+
+.text-danger-action {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.text-error-small {
+  color: var(--error);
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.text-error-tiny {
+  color: var(--error);
+  font-size: 10px;
+}
+
+.text-primary-heading {
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.text-primary-strong {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.text-accent-pending {
+  font-weight: 600;
+  color: var(--color-accent) !important;
+}
+
+.booking-description {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.booking-badge-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.facility-header {
+  margin-bottom: 1.5rem;
+}
+
+.booking-form {
+  display: none;
+}
+
+.booking-type-group {
+  display: none;
+}
+
+.booking-type-options {
+  margin-top: 0.35rem;
+}
+
+.booking-summary-title {
+  font-size: 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.booking-payment-note {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.booking-error-title {
+  font-size: 1.35rem;
+}
+
+.booking-error-message {
+  margin: 1rem 0 1.5rem;
+}
+
+.skeleton-booking-image {
+  height: 100px;
+  border-radius: 10px;
+  margin-top: 1rem;
+}
+
+.skeleton-facility-image {
+  height: 320px;
+  border-radius: var(--radius-lg);
+}
+
+.skeleton-ticket-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin: 0 auto 1.5rem;
+}
+
+.skeleton-title-short {
+  width: 60%;
+  margin: 0 auto 1rem;
+}
+
+.skeleton-text-wide {
+  width: 80%;
+  margin: 0 auto 1.5rem;
+}
+
+.skeleton-payment-panel {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-lg);
+}
+
+.skeleton-text-90 {
+  width: 90%;
+}
+
+.skeleton-text-72 {
+  width: 72%;
+}
+
+.empty-state-spacious {
+  grid-column: 1 / -1;
+  padding: 3rem;
+}
+
+.empty-state-muted {
+  padding: 2rem;
+  color: #94a3b8;
+}
+
+.empty-state-error {
+  text-align: center;
+  padding: 3rem;
+  color: var(--error);
+}
+
+.inline-error {
+  grid-column: 1 / -1;
+  color: var(--color-danger);
+}
+
+.filter-reset-button {
+  margin-top: 0.5rem;
+}
+
+.filters-title-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.browse-heading {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.facility-card-heading {
+  margin: 0;
+}
+
+.facility-description-clamp {
+  margin-top: 0.5rem;
+  height: 3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.facility-price {
+  margin-bottom: 0.5rem;
+}
+
+.facility-badge-row {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.facility-card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.facility-card-disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.facility-rate-note {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  margin-top: 0.5rem;
+}
+
+.facility-unavailable-note {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-top: 0.35rem;
+}
+
+.facility-thumb-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.payment-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.payment-status-block {
+  text-align: right;
+}
+
+.payment-status-badge {
+  margin-top: 0.35rem;
+  display: inline-block;
+}
+
+.payment-alert-icon {
+  width: 18px;
+  flex-shrink: 0;
+}
+
+.inline-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stacked-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-direction: column;
+}
+
+.table-action-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.table-error {
+  padding: 2rem;
+  color: var(--color-danger);
+}
+
+.table-error-centered {
+  text-align: center;
+  padding: 3rem;
+  color: var(--error);
+}
+
+.result-inner-narrow {
+  max-width: 500px;
+}
+
+.result-title-success {
+  color: var(--color-primary-dark);
+  margin-bottom: 0.75rem;
+  font-size: 1.65rem;
+}
+
+.result-title-danger {
+  color: var(--color-danger);
+  margin-bottom: 0.75rem;
+  font-size: 1.65rem;
+}
+
+.result-copy {
+  margin-bottom: 2rem;
+}
+
+.result-copy-centered {
+  margin-bottom: 2rem;
+  max-width: 36ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ticket-preview-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #475569;
+  margin: 0;
+}
+
+.dev-banner-action {
+  margin-top: 0.75rem;
+}
+
+.pending-title {
+  margin-top: 1.25rem;
+}
+
+.pending-copy {
+  margin-top: 0.75rem;
+}
+
+.timeout-copy {
+  margin: 1rem 0 1.5rem;
+}
+
+.ticket-back-link {
+  display: block;
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.92rem;
+}
+
+.ticket-print-icon {
+  width: 18px;
+}
+
+.admin-facility-thumb {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.admin-facility-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.admin-rate-meta {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.small-muted {
+  font-size: 0.78rem;
+}
+
+.summary-breakdown {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.summary-breakdown-title {
+  margin-bottom: 0.5rem;
+}
+
+.summary-breakdown-lines {
+  line-height: 1.5;
+}
