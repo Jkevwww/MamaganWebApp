@@ -7,6 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/css/google_oauth.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="auth-page-bg">
@@ -45,6 +46,23 @@
       <p class="auth-switch-text auth-switch-text--spacious">
         Already have an account? <a class="auth-switch-link" href="/login.html">Sign In</a>
       </p>
+
+      <div class="oauth-divider">
+        <hr>
+        <span>or</span>
+        <hr>
+      </div>
+
+      <div class="oauth-stack">
+        <a class="btn btn-google btn-block" href="/api/auth/google" id="googleRegisterBtn" aria-label="Continue using Google">
+          <img class="oauth-provider-icon" src="/assets/images/google.svg" alt="" aria-hidden="true">
+          Continue using Google
+        </a>
+        <a class="btn btn-github btn-block" href="/api/auth/github" id="githubRegisterBtn" aria-label="Continue using GitHub">
+          <img class="oauth-provider-icon" src="/assets/images/github.svg" alt="" aria-hidden="true">
+          Continue using GitHub
+        </a>
+      </div>
     </div>
   </div>
 

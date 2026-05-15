@@ -69,7 +69,12 @@
   width: 100%;
 }
 
-.google-g-icon {
+.google-g-icon,
+.oauth-provider-icon {
   width: 18px;
   height: 18px;
+}
+
+.btn-github .oauth-provider-icon {
+  filter: invert(1);
 }
