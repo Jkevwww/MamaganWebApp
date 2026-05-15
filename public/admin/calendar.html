@@ -17,10 +17,32 @@
     <p class="page-subtitle">Manage blocked dates and peak windows per facility. Wire to your blackout API when ready.</p>
   </header>
 
-  <div class="page-placeholder">
-    <h3>Module in progress</h3>
-    <p>Calendar grid and blackout editor will use the same card and modal patterns as facilities.</p>
-  </div>
+  <section class="module-grid module-grid-wide" aria-label="Calendar tools">
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon"><i data-lucide="calendar-days"></i></span>
+        <div>
+          <h2>Booking calendar</h2>
+          <p>Scan upcoming occupancy and blocked resort dates at a glance.</p>
+        </div>
+      </div>
+      <div class="calendar-preview" aria-label="Calendar preview">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        <strong>12</strong><strong>13</strong><strong class="is-busy">14</strong><strong>15</strong><strong class="is-blocked">16</strong><strong>17</strong><strong>18</strong>
+      </div>
+    </article>
+
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon module-icon-accent"><i data-lucide="ban"></i></span>
+        <div>
+          <h2>Blackout windows</h2>
+          <p>Block maintenance days, private events, or weather closures.</p>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary btn-block">Add blocked date</button>
+    </article>
+  </section>
 
   <script src="/assets/js/admin-layout.js"></script>
   <script>lucide.createIcons();</script>

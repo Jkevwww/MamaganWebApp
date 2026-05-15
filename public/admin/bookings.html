@@ -17,6 +17,27 @@
     <p class="page-subtitle">Review guest bookings, payment status, and visit schedule.</p>
   </header>
 
+  <section class="module-grid module-grid-compact" aria-label="Reservation summary">
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon"><i data-lucide="calendar-check"></i></span>
+        <div>
+          <h2>Today</h2>
+          <p>Arrivals and facility usage for the current schedule.</p>
+        </div>
+      </div>
+    </article>
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon module-icon-accent"><i data-lucide="wallet-cards"></i></span>
+        <div>
+          <h2>Payments</h2>
+          <p>Track pending, paid, and failed payment states.</p>
+        </div>
+      </div>
+    </article>
+  </section>
+
   <div class="table-toolbar">
     <label for="bookingStatusFilter" class="form-label">Filter by status</label>
     <select id="bookingStatusFilter" class="form-select">

@@ -17,10 +17,35 @@
     <p class="page-subtitle">Scan guest QR tickets and mark arrivals. Connect scanners or manual lookup when the check-in API is ready.</p>
   </header>
 
-  <div class="page-placeholder">
-    <h3>Module in progress</h3>
-    <p>Camera and search UI will follow the same toolbar + card layout as bookings.</p>
-  </div>
+  <section class="module-grid" aria-label="Check-in tools">
+    <article class="module-card scan-panel">
+      <div class="module-card-header">
+        <span class="module-icon"><i data-lucide="qr-code"></i></span>
+        <div>
+          <h2>QR scanner</h2>
+          <p>Validate guest tickets and update arrival status.</p>
+        </div>
+      </div>
+      <div class="qr-frame" aria-label="QR scanner preview">
+        <i data-lucide="scan-line"></i>
+      </div>
+      <button type="button" class="btn btn-primary btn-block">Start scanner</button>
+    </article>
+
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon module-icon-accent"><i data-lucide="search"></i></span>
+        <div>
+          <h2>Manual lookup</h2>
+          <p>Search by booking ID, guest name, or ticket code.</p>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="checkinSearch">Booking or guest</label>
+        <input id="checkinSearch" type="search" class="form-control" placeholder="Search booking">
+      </div>
+    </article>
+  </section>
 
   <script src="/assets/js/admin-layout.js"></script>
   <script>lucide.createIcons();</script>

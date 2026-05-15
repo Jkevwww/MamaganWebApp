@@ -17,10 +17,36 @@
     <p class="page-subtitle">Audit trail for authentication and admin actions. Hook this view to the system_logs query when you add the listing API.</p>
   </header>
 
-  <div class="page-placeholder">
-    <h3>Module in progress</h3>
-    <p>Table, filters, and export will follow the shared admin table pattern.</p>
-  </div>
+  <section class="table-card admin-reveal" aria-label="System log preview">
+    <div class="table-toolbar">
+      <label for="logActionFilter" class="form-label">Action</label>
+      <select id="logActionFilter" class="form-select">
+        <option value="">All actions</option>
+        <option value="LOGIN_REDIRECT_ADMIN">Login redirects</option>
+        <option value="UNAUTHORIZED_ADMIN_ACCESS">Unauthorized access</option>
+        <option value="ADMIN_ACCOUNT_UPDATED">Admin changes</option>
+      </select>
+      <button type="button" class="btn btn-outline btn-sm">Export logs</button>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Module</th>
+            <th>IP address</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="5" class="table-empty">Log records will appear here once loaded from the audit API.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
   <script src="/assets/js/admin-layout.js"></script>
   <script>lucide.createIcons();</script>

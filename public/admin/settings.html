@@ -17,10 +17,42 @@
     <p class="page-subtitle">Resort profile, notification preferences, and integration keys will live here.</p>
   </header>
 
-  <div class="page-placeholder">
-    <h3>Module in progress</h3>
-    <p>Use the form-card and form-grid classes from the global stylesheet when you add configuration forms.</p>
-  </div>
+  <section class="settings-grid" aria-label="System settings">
+    <article class="form-card admin-reveal">
+      <div class="module-card-header">
+        <span class="module-icon"><i data-lucide="building-2"></i></span>
+        <div>
+          <h2>Resort profile</h2>
+          <p>Keep public resort details consistent across booking pages.</p>
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="resortName">Resort name</label>
+          <input id="resortName" class="form-control" type="text" value="Mamagan Fun & Adventure Beach Resort">
+        </div>
+        <div class="form-group">
+          <label for="supportEmail">Support email</label>
+          <input id="supportEmail" class="form-control" type="email" placeholder="support@example.com">
+        </div>
+      </div>
+    </article>
+
+    <article class="form-card admin-reveal">
+      <div class="module-card-header">
+        <span class="module-icon module-icon-accent"><i data-lucide="bell-ring"></i></span>
+        <div>
+          <h2>Notifications</h2>
+          <p>Prepare alerts for bookings, payments, and check-ins.</p>
+        </div>
+      </div>
+      <div class="checkbox-row">
+        <label><input type="checkbox" checked> Booking alerts</label>
+        <label><input type="checkbox" checked> Payment updates</label>
+        <label><input type="checkbox"> Daily summary</label>
+      </div>
+    </article>
+  </section>
 
   <script src="/assets/js/admin-layout.js"></script>
   <script>lucide.createIcons();</script>

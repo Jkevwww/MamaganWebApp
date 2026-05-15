@@ -17,10 +17,40 @@
     <p class="page-subtitle">Guest accounts and roles will be managed from this workspace once connected to the user directory API.</p>
   </header>
 
-  <div class="page-placeholder">
-    <h3>Module in progress</h3>
-    <p>UI shell is ready; wire this page to your admin user endpoints when available.</p>
-  </div>
+  <section class="module-grid" aria-label="User management overview">
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon"><i data-lucide="users"></i></span>
+        <div>
+          <h2>Account directory</h2>
+          <p>Review guests, staff, admins, and viewer accounts from one place.</p>
+        </div>
+      </div>
+      <div class="preview-list">
+        <span>Guests</span>
+        <strong>Tourist access</strong>
+      </div>
+      <div class="preview-list">
+        <span>Staff</span>
+        <strong>Operations access</strong>
+      </div>
+      <div class="preview-list">
+        <span>Admins</span>
+        <strong>Management access</strong>
+      </div>
+    </article>
+
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon module-icon-accent"><i data-lucide="shield-check"></i></span>
+        <div>
+          <h2>Access tiers</h2>
+          <p>Manage SUPER_ADMIN, ADMIN, STAFF, VIEWER, and GUEST permissions.</p>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary btn-block">Add staff account</button>
+    </article>
+  </section>
 
   <script src="/assets/js/admin-layout.js"></script>
   <script>lucide.createIcons();</script>

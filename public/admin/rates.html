@@ -14,13 +14,39 @@
 
   <header class="page-header">
     <h1 class="page-title">Rates &amp; promos</h1>
-    <p class="page-subtitle">Seasonal pricing and promotional rules will be edited here once the rates service is connected.</p>
+    <p class="page-subtitle">Review seasonal pricing, promo windows, and rate rules for cottages, cabanas, and equipment.</p>
   </header>
 
-  <div class="page-placeholder">
-    <h3>Module in progress</h3>
-    <p>Promo forms will reuse <span class="text-muted">form-grid</span> and modal components for consistency.</p>
-  </div>
+  <section class="module-grid" aria-label="Rate management overview">
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon"><i data-lucide="tags"></i></span>
+        <div>
+          <h2>Seasonal rates</h2>
+          <p>Set day, night, hourly, and daily pricing by facility type.</p>
+        </div>
+      </div>
+      <div class="preview-list">
+        <span>Peak season</span>
+        <strong>Ready for rules</strong>
+      </div>
+      <div class="preview-list">
+        <span>Off-season</span>
+        <strong>Base rates active</strong>
+      </div>
+    </article>
+
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon module-icon-accent"><i data-lucide="badge-percent"></i></span>
+        <div>
+          <h2>Promotions</h2>
+          <p>Create limited offers with date ranges and booking conditions.</p>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary btn-block">New promo rule</button>
+    </article>
+  </section>
 
   <script src="/assets/js/admin-layout.js"></script>
   <script>lucide.createIcons();</script>
