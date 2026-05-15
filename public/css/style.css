@@ -179,16 +179,22 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   padding: clamp(3rem, 8vw, 6rem) 1.5rem;
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 2rem;
 }
 
-.hero-content { max-width: 600px; }
+.hero-content {
+  max-width: 780px;
+  text-align: left;
+}
 .hero-content h1 {
-  font-size: clamp(2.1rem, 5.2vw, 3.8rem);
+  font-size: clamp(1.95rem, 4.7vw, 3.45rem);
   margin-bottom: 1rem;
   line-height: 1.15;
+}
+.hero-content h1 span {
+  display: block;
 }
 .hero-content p { font-size: 1.1rem; margin-bottom: 2rem; opacity: 0.92; }
 .hero-btns { display: flex; flex-wrap: wrap; gap: 0.75rem; }
