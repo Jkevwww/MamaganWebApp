@@ -676,7 +676,6 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
 .table-responsive {
   width: 100%;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .data-table {
