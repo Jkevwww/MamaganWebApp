@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { AppError } = require('../middleware/error');
+const qrUtils = require('../utils/qr');
 
 const FACILITY_COLUMNS = `
   id, name, category, size, description, image_url, inventory_count,
@@ -242,6 +243,72 @@ async function cancelBooking(bookingId, userId) {
   return { message: 'Booking cancelled successfully' };
 }
 
+async function deleteBooking(bookingId, userId) {
+  const [result] = await pool.query(
+    "DELETE FROM bookings WHERE id = ? AND user_id = ? AND payment_status != 'paid'",
+    [bookingId, userId]
+  );
+  if (result.affectedRows === 0) {
+    throw new AppError('Booking not found or cannot be deleted', 404);
+  }
+  return { message: 'Booking deleted successfully' };
+}
+
+async function getTicketForBooking(bookingId, userId) {
+  const [rows] = await pool.query(
+    `SELECT 
+       b.id,
+       b.date,
+       b.start_time,
+       b.end_time,
+       b.payment_status,
+       b.status AS booking_status,
+       f.name AS facility_name,
+       t.qr_token,
+       t.status AS ticket_status
+     FROM bookings b
+     JOIN facilities f ON f.id = b.facility_id
+     LEFT JOIN tickets t ON t.booking_id = b.id
+     WHERE b.id = ? AND b.user_id = ?`,
+    [bookingId, userId]
+  );
+
+  if (rows.length === 0) {
+    throw new AppError('Booking not found', 404);
+  }
+
+  const booking = rows[0];
+  if (booking.payment_status !== 'paid') {
+    throw new AppError('Ticket is available after successful payment', 400);
+  }
+
+  let qrToken = booking.qr_token;
+  let ticketStatus = booking.ticket_status;
+
+  if (!qrToken) {
+    qrToken = qrUtils.generateQrToken(bookingId);
+    ticketStatus = 'valid';
+    await pool.query(
+      "INSERT INTO tickets (booking_id, qr_token, status) VALUES (?, ?, 'valid') ON DUPLICATE KEY UPDATE status='valid'",
+      [bookingId, qrToken]
+    );
+  }
+
+  const qrDataUrl = await qrUtils.generateQrDataUrl(qrToken);
+
+  return {
+    id: booking.id,
+    facility_name: booking.facility_name,
+    date: booking.date,
+    start_time: booking.start_time,
+    end_time: booking.end_time,
+    booking_status: booking.booking_status,
+    payment_status: booking.payment_status,
+    ticket_status: ticketStatus,
+    qr_data_url: qrDataUrl
+  };
+}
+
 module.exports = { 
   getAllFacilities, 
   getFacilityById, 
@@ -249,5 +316,7 @@ module.exports = {
   bookFacility, 
   getUserBookings,
   getBookingById,
-  cancelBooking
+  cancelBooking,
+  deleteBooking,
+  getTicketForBooking
 };

@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const QRCode = require('qrcode');
 
 /**
  * Generate a secure, unique token for a booking ticket
@@ -8,16 +9,29 @@ function generateQrToken(bookingId) {
 }
 
 /**
- * Generate a QR Data URL (placeholder for actual image generation)
- * In a real app, we might use a library like 'qrcode'
- * For now, we'll return a structured data string that can be used by frontend
+ * Generate the private payload encoded into the QR image.
  */
-function generateQrDataUrl(qrToken) {
-  // Structure: mamagan-ticket://<token>
+function getQrPayload(qrToken) {
   return `mamagan-ticket://${qrToken}`;
+}
+
+/**
+ * Generate a scannable QR image as a Data URL.
+ */
+async function generateQrDataUrl(qrToken) {
+  return QRCode.toDataURL(getQrPayload(qrToken), {
+    errorCorrectionLevel: 'M',
+    margin: 2,
+    width: 320,
+    color: {
+      dark: '#0f172a',
+      light: '#ffffff'
+    }
+  });
 }
 
 module.exports = {
   generateQrToken,
-  generateQrDataUrl
+  generateQrDataUrl,
+  getQrPayload
 };

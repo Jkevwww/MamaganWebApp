@@ -49,6 +49,22 @@
     </div>
   </main>
 
+  <div id="bookingActionOverlay" class="booking-action-overlay" aria-hidden="true">
+    <section class="booking-action-popout" role="dialog" aria-modal="true" aria-labelledby="bookingActionTitle">
+      <button type="button" class="booking-action-close" id="bookingActionClose" aria-label="Close">
+        <i data-lucide="x"></i>
+      </button>
+      <div class="booking-action-visual booking-action-visual--danger" id="bookingActionVisual"></div>
+      <h2 id="bookingActionTitle">Delete Booking?</h2>
+      <p id="bookingActionMessage" class="text-muted">This booking will be permanently removed.</p>
+      <div class="booking-action-meta" id="bookingActionMeta"></div>
+      <div class="booking-action-buttons" id="bookingActionButtons">
+        <button type="button" class="btn btn-outline" id="bookingActionCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="bookingActionConfirm">Confirm Delete</button>
+      </div>
+    </section>
+  </div>
+
   <script src="/js/skeleton.js"></script>
   <script src="/js/bookings.js"></script>
   <script>

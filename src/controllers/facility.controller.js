@@ -96,6 +96,24 @@ async function cancelBooking(req, res, next) {
   }
 }
 
+async function deleteBooking(req, res, next) {
+  try {
+    const result = await facilityService.deleteBooking(req.params.id, req.user.id);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getTicketForBooking(req, res, next) {
+  try {
+    const ticket = await facilityService.getTicketForBooking(req.params.id, req.user.id);
+    res.status(200).json(ticket);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = { 
   getAllFacilities, 
   getFacilityById, 
@@ -103,5 +121,7 @@ module.exports = {
   bookFacility, 
   getUserBookings,
   getBookingById,
-  cancelBooking
+  cancelBooking,
+  deleteBooking,
+  getTicketForBooking
 };

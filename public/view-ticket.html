@@ -76,6 +76,26 @@
   </main>
 
   <script>
+    function escHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatDate(value) {
+      return value ? new Date(value).toLocaleDateString() : 'N/A';
+    }
+
+    function formatTime(start, end) {
+      const startText = start ? String(start).substring(0, 5) : '';
+      const endText = end ? String(end).substring(0, 5) : '';
+      return startText && endText ? `${startText} - ${endText}` : 'N/A';
+    }
+
     async function checkAuth() {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
@@ -87,8 +107,12 @@
           document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
           const lo = document.getElementById('navLogout');
           if (lo) lo.style.display = 'inline-block';
+          return true;
         }
-      } catch (_) {}
+        return false;
+      } catch (_) {
+        return false;
+      }
     }
 
     document.getElementById('navLogout')?.addEventListener('click', async (e) => {
@@ -103,14 +127,62 @@
     document.getElementById('printTicketBtn')?.addEventListener('click', () => window.print());
 
     const params = new URLSearchParams(window.location.search);
-    document.getElementById('ticketFacility').textContent = params.get('facility') || 'N/A';
-    document.getElementById('ticketDate').textContent = params.get('date') || 'N/A';
-    document.getElementById('ticketTime').textContent = params.get('time') || 'N/A';
-    document.getElementById('ticketID').textContent = '#' + String(params.get('id') || '0000').padStart(4, '0');
+    const bookingId = params.get('id');
+
+    function setFallbackTicketDetails() {
+      document.getElementById('ticketFacility').textContent = params.get('facility') || 'N/A';
+      document.getElementById('ticketDate').textContent = params.get('date') || 'N/A';
+      document.getElementById('ticketTime').textContent = params.get('time') || 'N/A';
+      document.getElementById('ticketID').textContent = '#' + String(bookingId || '0000').padStart(4, '0');
+    }
+
+    async function loadTicket() {
+      setFallbackTicketDetails();
+      if (!bookingId) {
+        showTicketError('Missing booking reference.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/facilities/bookings/${encodeURIComponent(bookingId)}/ticket`, { credentials: 'same-origin' });
+        if (res.status === 401 || res.status === 403) {
+          const next = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.replace(`/login.html?next=${next}`);
+          return;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Unable to load ticket');
+
+        document.getElementById('ticketFacility').textContent = data.facility_name || 'N/A';
+        document.getElementById('ticketDate').textContent = formatDate(data.date);
+        document.getElementById('ticketTime').textContent = formatTime(data.start_time, data.end_time);
+        document.getElementById('ticketID').textContent = '#' + String(data.id || bookingId).padStart(4, '0');
+        document.getElementById('qr-container').innerHTML = `<img src="${escHtml(data.qr_data_url)}" alt="QR code for booking #${escHtml(String(data.id || bookingId))}">`;
+      } catch (err) {
+        showTicketError(err.message);
+      }
+    }
+
+    function showTicketError(message) {
+      document.getElementById('qr-container').innerHTML = `
+        <div class="empty-state-muted">
+          <i data-lucide="alert-circle" class="icon-info-centered"></i>
+          <p>${escHtml(message)}</p>
+        </div>
+      `;
+      window.lucide?.createIcons();
+    }
 
     (async () => {
-      await checkAuth();
-      lucide.createIcons();
+      const authed = await checkAuth();
+      if (!authed) {
+        const next = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.replace(`/login.html?next=${next}`);
+        return;
+      }
+      await loadTicket();
+      window.lucide?.createIcons();
     })();
   </script>
 </body>

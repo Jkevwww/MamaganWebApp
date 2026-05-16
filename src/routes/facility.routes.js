@@ -12,8 +12,14 @@ router.get('/my-bookings', authMiddleware, facilityController.getUserBookings);
 // GET /api/facilities/bookings/:id
 router.get('/bookings/:id', authMiddleware, facilityController.getBookingById);
 
+// GET /api/facilities/bookings/:id/ticket
+router.get('/bookings/:id/ticket', authMiddleware, facilityController.getTicketForBooking);
+
 // PATCH /api/facilities/bookings/:id/cancel
 router.patch('/bookings/:id/cancel', authMiddleware, facilityController.cancelBooking);
+
+// DELETE /api/facilities/bookings/:id
+router.delete('/bookings/:id', authMiddleware, facilityController.deleteBooking);
 
 // GET /api/facilities/:id
 router.get('/:id', facilityController.getFacilityById);

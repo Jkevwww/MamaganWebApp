@@ -9,6 +9,54 @@ const PAYMONGO_WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET;
 const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3000';
 const MOCK_PAYMENTS = process.env.MOCK_PAYMENTS === 'true';
 
+function paymongoHeaders() {
+  return {
+    Authorization: `Basic ${Buffer.from(PAYMONGO_SECRET_KEY + ':').toString('base64')}`,
+    'Content-Type': 'application/json'
+  };
+}
+
+function getPaymentFromCheckoutSession(session) {
+  const payments = session?.attributes?.payments || [];
+  return payments.find((payment) => payment?.attributes?.status === 'paid') || payments[0] || null;
+}
+
+function getPaymentMethod(payment) {
+  return payment?.attributes?.source?.type
+    || payment?.attributes?.payment_method?.type
+    || payment?.attributes?.payment_method_type
+    || null;
+}
+
+async function markBookingPaid(conn, { bookingId, checkoutId, payment, rawPayload }) {
+  const paymentId = payment?.id || null;
+  const paymentMethod = getPaymentMethod(payment);
+  const payloadJson = rawPayload ? JSON.stringify(rawPayload) : null;
+
+  if (checkoutId) {
+    await conn.query(
+      `UPDATE payments SET 
+       provider_payment_id = COALESCE(?, provider_payment_id), 
+       payment_method = COALESCE(?, payment_method), 
+       status = 'paid', 
+       raw_payload = COALESCE(?, raw_payload) 
+       WHERE provider_checkout_id = ?`,
+      [paymentId, paymentMethod, payloadJson, checkoutId]
+    );
+  }
+
+  await conn.query(
+    "UPDATE bookings SET status = 'approved', payment_status = 'paid' WHERE id = ?",
+    [bookingId]
+  );
+
+  const qrToken = qrUtils.generateQrToken(bookingId);
+  await conn.query(
+    "INSERT INTO tickets (booking_id, qr_token, status) VALUES (?, ?, 'valid') ON DUPLICATE KEY UPDATE status='valid'",
+    [bookingId, qrToken]
+  );
+}
+
 /**
  * Create a PayMongo Checkout Session
  */
@@ -33,6 +81,10 @@ async function createCheckoutSession(bookingId, userId) {
   }
 
   if (booking.payment_status === 'paid') {
+    throw new AppError('Booking is already paid', 400);
+  }
+
+  if (await syncPaidCheckoutSession(bookingId, userId)) {
     throw new AppError('Booking is already paid', 400);
   }
 
@@ -73,10 +125,7 @@ async function createCheckoutSession(bookingId, userId) {
         }
       },
       {
-        headers: {
-          Authorization: `Basic ${Buffer.from(PAYMONGO_SECRET_KEY + ':').toString('base64')}`,
-          'Content-Type': 'application/json'
-        }
+        headers: paymongoHeaders()
       }
     );
 
@@ -126,37 +175,13 @@ async function handleWebhook(payload, signature) {
     if (eventType === 'checkout_session.payment.paid') {
       const session = event.data.attributes.data;
       const checkoutId = session.id;
-      const paymentId = session.attributes.payments[0].id;
-      const paymentMethod = session.attributes.payments[0].attributes.source.type;
-      
-      // Update payment record
-      await conn.query(
-        `UPDATE payments SET 
-         provider_payment_id = ?, 
-         payment_method = ?, 
-         status = 'paid', 
-         raw_payload = ? 
-         WHERE provider_checkout_id = ?`,
-        [paymentId, paymentMethod, JSON.stringify(event), checkoutId]
-      );
+      const payment = getPaymentFromCheckoutSession(session);
 
       // Get booking ID
       const [paymentRows] = await conn.query('SELECT booking_id FROM payments WHERE provider_checkout_id = ?', [checkoutId]);
       if (paymentRows.length > 0) {
         const bookingId = paymentRows[0].booking_id;
-        
-        // Update booking
-        await conn.query(
-          "UPDATE bookings SET status = 'approved', payment_status = 'paid' WHERE id = ?",
-          [bookingId]
-        );
-
-        // Generate Ticket
-        const qrToken = qrUtils.generateQrToken(bookingId);
-        await conn.query(
-          "INSERT INTO tickets (booking_id, qr_token, status) VALUES (?, ?, 'valid')",
-          [bookingId, qrToken]
-        );
+        await markBookingPaid(conn, { bookingId, checkoutId, payment, rawPayload: event });
       }
     }
 
@@ -254,7 +279,65 @@ async function getPaymentStatus(bookingId, userId) {
     "SELECT payment_status, status FROM bookings WHERE id = ? AND user_id = ?",
     [bookingId, userId]
   );
-  return rows[0] || null;
+  const booking = rows[0] || null;
+  if (!booking || booking.payment_status === 'paid') return booking;
+
+  const synced = await syncPaidCheckoutSession(bookingId, userId);
+  if (!synced) return booking;
+
+  return { payment_status: 'paid', status: 'approved', synced: true };
+}
+
+async function syncPaidCheckoutSession(bookingId, userId) {
+  if (!PAYMONGO_SECRET_KEY) return false;
+
+  const [paymentRows] = await pool.query(
+    `SELECT p.provider_checkout_id
+     FROM payments p
+     JOIN bookings b ON b.id = p.booking_id
+     WHERE p.booking_id = ? AND b.user_id = ? AND p.provider = 'paymongo' AND p.provider_checkout_id IS NOT NULL
+     ORDER BY p.created_at DESC, p.id DESC
+     LIMIT 1`,
+    [bookingId, userId]
+  );
+
+  const checkoutId = paymentRows[0]?.provider_checkout_id;
+  if (!checkoutId) return false;
+
+  let session;
+  try {
+    const response = await axios.get(
+      `https://api.paymongo.com/v1/checkout_sessions/${encodeURIComponent(checkoutId)}`,
+      { headers: paymongoHeaders() }
+    );
+    session = response.data.data;
+  } catch (err) {
+    console.error('PayMongo checkout sync error:', err.response?.data || err.message);
+    return false;
+  }
+
+  const payment = getPaymentFromCheckoutSession(session);
+  const paymentStatus = payment?.attributes?.status;
+  if (!payment || (paymentStatus && paymentStatus !== 'paid')) return false;
+
+  const conn = await pool.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    await markBookingPaid(conn, {
+      bookingId,
+      checkoutId,
+      payment,
+      rawPayload: { source: 'checkout_sync', data: session }
+    });
+    await conn.commit();
+    return true;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 module.exports = {
