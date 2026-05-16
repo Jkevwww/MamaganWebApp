@@ -472,6 +472,43 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   border: 1px solid #a7f3d0;
 }
 
+.verification-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius-md);
+  background: #f0f9ff;
+  color: #0f172a;
+}
+
+.verification-panel svg {
+  color: var(--color-primary);
+  flex: 0 0 auto;
+}
+
+.verification-panel h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  color: var(--color-navy);
+}
+
+.verification-panel p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+#verificationCode,
+#loginVerificationCode {
+  text-align: center;
+  letter-spacing: 0.22em;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
 /* Auth pages */
 .auth-page-bg {
   min-height: 100vh;

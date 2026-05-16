@@ -39,6 +39,22 @@
         <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Login</button>
       </form>
 
+      <form id="loginVerificationForm" class="is-hidden" novalidate>
+        <div class="verification-panel">
+          <i data-lucide="mail-check"></i>
+          <div>
+            <h2>Verify your email</h2>
+            <p>Enter the code sent to <strong id="loginVerificationEmailLabel"></strong> to finish creating your account.</p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="loginVerificationCode"><i class="icon-xs-inline" data-lucide="shield-check"></i> Verification Code</label>
+          <input type="text" id="loginVerificationCode" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="loginVerifyBtn">Verify and Continue</button>
+        <button type="button" class="btn btn-secondary btn-block mt-2" id="editLoginEmailBtn">Use a different email</button>
+      </form>
+
       <p class="auth-switch-text">
         Don't have an account yet?  <a class="auth-switch-link" href="/register.html">Register</a>
       </p>

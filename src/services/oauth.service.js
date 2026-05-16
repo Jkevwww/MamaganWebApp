@@ -16,6 +16,7 @@ function sanitizeUser(row) {
     access_tier: row.access_tier,
     avatar_url: row.avatar_url,
     active: row.active,
+    email_verified_at: row.email_verified_at,
     last_login_at: row.last_login_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -92,7 +93,11 @@ async function linkOrCreateOAuthUser({
       user.avatar_url = avatarUrl;
     }
 
-    await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
+    await pool.query(
+      'UPDATE users SET last_login_at = NOW(), email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = ?',
+      [user.id]
+    );
+    user.email_verified_at = user.email_verified_at || new Date();
 
     const token = signToken({ id: user.id, role: user.role, access_tier: user.access_tier });
     return {
@@ -137,7 +142,11 @@ async function linkOrCreateOAuthUser({
       user.avatar_url = avatarUrl;
     }
 
-    await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
+    await pool.query(
+      'UPDATE users SET last_login_at = NOW(), email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = ?',
+      [user.id]
+    );
+    user.email_verified_at = user.email_verified_at || new Date();
 
     const token = signToken({ id: user.id, role: user.role, access_tier: user.access_tier });
     return {
@@ -156,8 +165,8 @@ async function linkOrCreateOAuthUser({
   try {
     await conn.beginTransaction();
     const [result] = await conn.query(
-      `INSERT INTO users (name, email, phone, password_hash, password, role, access_tier, active, avatar_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (name, email, phone, password_hash, password, role, access_tier, active, avatar_url, email_verified_at, last_login_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [display, emailNorm, '', null, null, role, accessTier, active, avatarUrl || null]
     );
     const userId = result.insertId;
@@ -193,6 +202,7 @@ async function linkOrCreateOAuthUser({
         access_tier: accessTier,
         avatar_url: avatarUrl || null,
         active: true,
+        email_verified_at: new Date(),
         last_login_at: new Date(),
         created_at: null,
         updated_at: null,

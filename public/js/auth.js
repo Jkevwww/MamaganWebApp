@@ -134,12 +134,59 @@ async function redirectIfAlreadyLoggedIn(alertId) {
 function initLoginForm(formId, alertId, btnId) {
   const btn = document.getElementById(btnId);
   if (btn) btn.dataset.originalText = btn.textContent;
+  const verifyForm = document.getElementById('loginVerificationForm');
+  const verifyBtn = document.getElementById('loginVerifyBtn');
+  if (verifyBtn) verifyBtn.dataset.originalText = verifyBtn.textContent;
+  const editBtn = document.getElementById('editLoginEmailBtn');
+  const emailLabel = document.getElementById('loginVerificationEmailLabel');
+  let pendingVerificationEmail = '';
 
   showLoginQueryMessage(alertId);
   redirectIfAlreadyLoggedIn(alertId);
 
   const formEl = document.getElementById(formId);
   if (!formEl) return;
+
+  if (editBtn) {
+    editBtn.addEventListener('click', () => {
+      hideAlert(alertId);
+      verifyForm?.classList.add('is-hidden');
+      formEl.classList.remove('is-hidden');
+      document.getElementById('loginVerificationCode').value = '';
+      document.getElementById('email')?.focus();
+    });
+  }
+
+  if (verifyForm) {
+    verifyForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert(alertId);
+      const code = document.getElementById('loginVerificationCode').value.trim();
+      if (!pendingVerificationEmail || !code) {
+        showAlert(alertId, 'Enter the verification code sent to your email.');
+        return;
+      }
+
+      setLoading('loginVerifyBtn', true);
+      try {
+        const res = await fetch('/api/auth/register/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ email: pendingVerificationEmail, code }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Email verification failed');
+
+        rememberUser(data.user);
+        window.location.replace(redirectForUser(data.user));
+      } catch (err) {
+        showAlert(alertId, err.message);
+      } finally {
+        setLoading('loginVerifyBtn', false);
+      }
+    });
+  }
 
   formEl.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -163,6 +210,17 @@ function initLoginForm(formId, alertId, btnId) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Login failed');
 
+      if (data.requires_verification) {
+        pendingVerificationEmail = data.email || email;
+        if (emailLabel) emailLabel.textContent = pendingVerificationEmail;
+        formEl.classList.add('is-hidden');
+        verifyForm?.classList.remove('is-hidden');
+        const devCodeHint = data.dev_code ? ` Development code: ${data.dev_code}` : '';
+        showAlert(alertId, `${data.message || 'Verification code sent.'}${devCodeHint}`, 'success');
+        document.getElementById('loginVerificationCode')?.focus();
+        return;
+      }
+
       rememberUser(data.user);
       window.location.replace(redirectForUser(data.user));
     } catch (err) {
@@ -176,11 +234,57 @@ function initLoginForm(formId, alertId, btnId) {
 function initRegisterForm(formId, alertId, btnId) {
   const btn = document.getElementById(btnId);
   if (btn) btn.dataset.originalText = btn.textContent;
+  const verifyForm = document.getElementById('verifyRegistrationForm');
+  const verifyBtn = document.getElementById('verifyBtn');
+  if (verifyBtn) verifyBtn.dataset.originalText = verifyBtn.textContent;
+  const editBtn = document.getElementById('editRegistrationBtn');
+  const emailLabel = document.getElementById('verificationEmailLabel');
+  let pendingVerificationEmail = '';
 
   redirectIfAlreadyLoggedIn(alertId);
 
   const formEl = document.getElementById(formId);
   if (!formEl) return;
+
+  if (editBtn) {
+    editBtn.addEventListener('click', () => {
+      hideAlert(alertId);
+      verifyForm?.classList.add('is-hidden');
+      formEl.classList.remove('is-hidden');
+      document.getElementById('verificationCode').value = '';
+    });
+  }
+
+  if (verifyForm) {
+    verifyForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert(alertId);
+      const code = document.getElementById('verificationCode').value.trim();
+      if (!pendingVerificationEmail || !code) {
+        showAlert(alertId, 'Enter the verification code sent to your email.');
+        return;
+      }
+
+      setLoading('verifyBtn', true);
+      try {
+        const res = await fetch('/api/auth/register/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ email: pendingVerificationEmail, code }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Email verification failed');
+
+        rememberUser(data.user);
+        window.location.replace('/facilities.html');
+      } catch (err) {
+        showAlert(alertId, err.message);
+      } finally {
+        setLoading('verifyBtn', false);
+      }
+    });
+  }
 
   formEl.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -218,8 +322,13 @@ function initRegisterForm(formId, alertId, btnId) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
 
-      rememberUser(data.user);
-      window.location.replace('/facilities.html');
+      pendingVerificationEmail = data.email || email;
+      if (emailLabel) emailLabel.textContent = pendingVerificationEmail;
+      formEl.classList.add('is-hidden');
+      verifyForm?.classList.remove('is-hidden');
+      const devCodeHint = data.dev_code ? ` Development code: ${data.dev_code}` : '';
+      showAlert(alertId, `Verification code sent. Check your email.${devCodeHint}`, 'success');
+      document.getElementById('verificationCode')?.focus();
     } catch (err) {
       showAlert(alertId, err.message);
     } finally {

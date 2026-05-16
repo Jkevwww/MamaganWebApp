@@ -32,11 +32,31 @@ async function register(req, res, next) {
     const errMsg = validateRegisterBody({ name, email, phone, password });
     if (errMsg) return res.status(400).json({ message: errMsg });
 
-    const { token, user } = await authService.register({
+    const result = await authService.startRegistration({
       name: name.trim(),
       email: email.trim().toLowerCase(),
       phone: phone.trim(),
       password,
+    });
+
+    return res.status(202).json({
+      message: 'Verification code sent to your email',
+      email: result.email,
+      expires_in_minutes: result.expires_in_minutes,
+      email_delivery: result.delivery,
+      dev_code: result.dev_code,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function verifyRegistration(req, res, next) {
+  try {
+    const { email, code } = req.body;
+    const { token, user } = await authService.verifyRegistration({
+      email: typeof email === 'string' ? email.trim().toLowerCase() : '',
+      code,
     });
 
     res.cookie(getTokenCookieName(), token, { ...getCookieOptions() });
@@ -88,6 +108,48 @@ async function login(req, res, next) {
     res.cookie(getTokenCookieName(), token, { ...getCookieOptions() });
     return res.status(200).json({ user, redirect_to: redirectTo });
   } catch (err) {
+    if (err.code === 'ACCOUNT_NOT_FOUND') {
+      try {
+        const result = await authService.startLoginRegistration({
+          email: emailNorm,
+          password: req.body?.password,
+        });
+
+        await logSystemAction({
+          userId: null,
+          action: 'LOCAL_LOGIN_REGISTRATION_CODE_SENT',
+          module: 'AUTH',
+          targetType: 'users',
+          targetId: null,
+          details: { email: emailNorm || null, method: 'password' },
+          ipAddress,
+          userAgent,
+        });
+
+        return res.status(202).json({
+          message: 'We did not find an account yet. A verification code was sent to this email to create one.',
+          requires_verification: true,
+          verification_context: 'login_registration',
+          email: result.email,
+          expires_in_minutes: result.expires_in_minutes,
+          email_delivery: result.delivery,
+          dev_code: result.dev_code,
+        });
+      } catch (registrationErr) {
+        await logSystemAction({
+          userId: null,
+          action: 'LOCAL_LOGIN_REGISTRATION_FAILED',
+          module: 'AUTH',
+          targetType: 'users',
+          targetId: null,
+          details: { email: emailNorm || null, message: registrationErr.message },
+          ipAddress,
+          userAgent,
+        });
+        return next(registrationErr);
+      }
+    }
+
     await logSystemAction({
       userId: null,
       action: 'LOCAL_LOGIN_FAILED',
@@ -141,4 +203,4 @@ async function getMe(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, getMe };
+module.exports = { register, verifyRegistration, login, logout, getMe };
