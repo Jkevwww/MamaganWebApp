@@ -2,6 +2,7 @@
 
 let user = null;
 let currentFacility = null;
+let appliedPromoCode = '';
 const facilityId = new URLSearchParams(window.location.search).get('id');
 
 async function checkAuth() {
@@ -81,10 +82,23 @@ function setupForm() {
     radio.addEventListener('change', updateState);
   });
 
+  document.getElementById('promoCodeInput')?.addEventListener('input', () => {
+    const value = document.getElementById('promoCodeInput').value.trim().toUpperCase();
+    if (value !== appliedPromoCode) {
+      appliedPromoCode = '';
+      setPromoStatus('', '');
+    }
+  });
+
+  document.getElementById('applyPromoBtn')?.addEventListener('click', async () => {
+    appliedPromoCode = document.getElementById('promoCodeInput').value.trim().toUpperCase();
+    await updateState({ applyingPromo: true });
+  });
+
   updateState();
 }
 
-async function updateState() {
+async function updateState(options = {}) {
   const date = document.getElementById('bookDate').value;
   const startTime = document.getElementById('startTime').value;
   const endTime = document.getElementById('endTime').value;
@@ -117,7 +131,7 @@ async function updateState() {
       setSubmitEnabled(true);
       
       // Calculate Total
-      calculateTotalDisplay(quantity, guestCount, startTime, endTime, bookingType);
+      await calculateTotalDisplay(quantity, guestCount, startTime, endTime, bookingType, options);
     } else {
       showAvailabilityStatus(result.reason, 'error');
       setSubmitEnabled(false);
@@ -176,6 +190,72 @@ function calculateTotalDisplay(quantity, guestCount, startTime, endTime, booking
   `;
 }
 
+function formatMoney(value) {
+  return `PHP ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+async function requestQuote(promoCode = '') {
+  const res = await fetch(`/api/facilities/${facilityId}/quote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({
+      date: document.getElementById('bookDate').value,
+      start_time: document.getElementById('startTime').value,
+      end_time: document.getElementById('endTime').value,
+      quantity: document.getElementById('quantity').value,
+      guest_count: document.getElementById('guestCount').value,
+      bookingType: document.querySelector('input[name="bookingType"]:checked')?.value || 'DAY',
+      promo_code: promoCode,
+    })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Unable to calculate total');
+  return data;
+}
+
+async function calculateTotalDisplay(quantity, guestCount, startTime, endTime, bookingType, options = {}) {
+  let quote;
+  try {
+    quote = await requestQuote(appliedPromoCode);
+    if (appliedPromoCode && quote.promo) {
+      setPromoStatus(`Promo ${quote.promo.code} applied. You saved ${formatMoney(quote.discount_amount)}.`, 'success');
+    } else if (options.applyingPromo && !appliedPromoCode) {
+      setPromoStatus('Enter a promo code first.', 'error');
+    }
+  } catch (err) {
+    if (appliedPromoCode) {
+      setPromoStatus(err.message, 'error');
+      appliedPromoCode = '';
+      quote = await requestQuote('');
+    } else {
+      throw err;
+    }
+  }
+
+  const lines = [
+    `<div>Base amount: <strong>${formatMoney(quote.base_amount)}</strong></div>`,
+  ];
+
+  if (quote.seasonal_rate) {
+    lines.push(`<div>Seasonal rate: <strong>${escHtml(quote.seasonal_rate.name)} (${Number(quote.seasonal_multiplier).toFixed(2)}x)</strong></div>`);
+  }
+
+  lines.push(`<div>Subtotal: <strong>${formatMoney(quote.subtotal_amount)}</strong></div>`);
+
+  if (quote.discount_amount > 0) {
+    lines.push(`<div>Promo discount: <strong>-${formatMoney(quote.discount_amount)}</strong></div>`);
+  }
+
+  document.getElementById('totalAmount').textContent = formatMoney(quote.total_amount);
+  document.getElementById('summaryDetails').innerHTML = `
+    <div class="summary-breakdown">
+      <div class="facility-price"><strong>${escHtml(currentFacility.name)}</strong></div>
+      <div class="summary-breakdown-lines">${lines.join('')}</div>
+    </div>
+  `;
+}
+
 function showAvailabilityStatus(msg, type) {
   const el = document.getElementById('availabilityStatus');
   el.textContent = msg;
@@ -192,6 +272,18 @@ function setSubmitEnabled(enabled) {
 function resetTotal() {
   document.getElementById('totalAmount').textContent = '₱0.00';
   document.getElementById('summaryDetails').innerHTML = '<p class="text-muted-small">Fill in the details to see the total amount.</p>';
+}
+
+function setPromoStatus(message, type) {
+  const el = document.getElementById('promoStatus');
+  if (!el) return;
+  if (!message) {
+    el.className = 'promo-status is-hidden';
+    el.textContent = '';
+    return;
+  }
+  el.className = `promo-status promo-status-${type}`;
+  el.textContent = message;
 }
 
 function showError(title, msg) {
@@ -220,7 +312,8 @@ document.getElementById('submitBooking').addEventListener('click', async () => {
     quantity: document.getElementById('quantity').value,
     guest_count: document.getElementById('guestCount').value,
     notes: document.getElementById('notes').value,
-    bookingType: document.querySelector('input[name="bookingType"]:checked')?.value || 'DAY'
+    bookingType: document.querySelector('input[name="bookingType"]:checked')?.value || 'DAY',
+    promo_code: appliedPromoCode
   };
 
   try {

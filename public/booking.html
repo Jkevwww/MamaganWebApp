@@ -86,6 +86,14 @@
           <div id="summaryDetails">
              <p class="text-muted">Fill in the details to see the total amount.</p>
           </div>
+          <div class="promo-apply-panel">
+            <label for="promoCodeInput">Promo code</label>
+            <div class="promo-apply-row">
+              <input id="promoCodeInput" class="form-control" type="text" placeholder="Enter promo code">
+              <button type="button" id="applyPromoBtn" class="btn btn-secondary">Apply</button>
+            </div>
+            <div id="promoStatus" class="promo-status is-hidden" role="status" aria-live="polite"></div>
+          </div>
           <hr class="summary-divider">
           <div class="summary-total-row">
             <span>Total amount</span>

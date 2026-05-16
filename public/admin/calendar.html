@@ -14,21 +14,33 @@
 
   <header class="page-header">
     <h1 class="page-title">Calendar &amp; blackouts</h1>
-    <p class="page-subtitle">Manage blocked dates and peak windows per facility. Wire to your blackout API when ready.</p>
+    <p class="page-subtitle">Review booking activity and manage blocked resort dates per facility.</p>
   </header>
 
   <section class="module-grid module-grid-wide" aria-label="Calendar tools">
-    <article class="module-card">
+    <article class="module-card calendar-module-card">
       <div class="module-card-header">
         <span class="module-icon"><i data-lucide="calendar-days"></i></span>
         <div>
           <h2>Booking calendar</h2>
-          <p>Scan upcoming occupancy and blocked resort dates at a glance.</p>
+          <p>Scan paid, pending, and blocked dates at a glance.</p>
         </div>
       </div>
-      <div class="calendar-preview" aria-label="Calendar preview">
-        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-        <strong>12</strong><strong>13</strong><strong class="is-busy">14</strong><strong>15</strong><strong class="is-blocked">16</strong><strong>17</strong><strong>18</strong>
+      <div class="calendar-toolbar">
+        <div class="calendar-month-actions">
+          <button type="button" id="prevMonthBtn" class="btn btn-secondary btn-sm" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+          <h3 id="calendarMonthLabel">Loading...</h3>
+          <button type="button" id="nextMonthBtn" class="btn btn-secondary btn-sm" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
+        </div>
+        <select id="calendarFacilityFilter" class="form-select calendar-filter">
+          <option value="">All facilities</option>
+        </select>
+      </div>
+      <div id="bookingCalendar" class="booking-calendar" aria-label="Booking calendar"></div>
+      <div id="calendarLegend" class="calendar-legend">
+        <span><i class="legend-dot legend-paid"></i>Paid booking</span>
+        <span><i class="legend-dot legend-pending"></i>Pending booking</span>
+        <span><i class="legend-dot legend-blocked"></i>Blackout</span>
       </div>
     </article>
 
@@ -40,11 +52,258 @@
           <p>Block maintenance days, private events, or weather closures.</p>
         </div>
       </div>
-      <button type="button" class="btn btn-primary btn-block">Add blocked date</button>
+      <form id="blackoutForm" class="blackout-form">
+        <div class="form-group">
+          <label for="blackoutFacility">Facility</label>
+          <select id="blackoutFacility" class="form-select">
+            <option value="">Entire resort</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="blackoutStart">Start date</label>
+            <input id="blackoutStart" type="date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="blackoutEnd">End date</label>
+            <input id="blackoutEnd" type="date" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="blackoutReason">Reason</label>
+          <input id="blackoutReason" type="text" class="form-control" placeholder="Maintenance, private event, weather closure">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Add blackout window</button>
+      </form>
+
+      <div class="blackout-list-header">
+        <h3>Active blackout windows</h3>
+      </div>
+      <div id="blackoutList" class="blackout-list"></div>
     </article>
   </section>
 
   <script src="/assets/js/admin-layout.js"></script>
-  <script>lucide.createIcons();</script>
+  <script>
+    (function () {
+      const token = localStorage.getItem('token');
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const calendarEl = document.getElementById('bookingCalendar');
+      const monthLabel = document.getElementById('calendarMonthLabel');
+      const facilityFilter = document.getElementById('calendarFacilityFilter');
+      const blackoutFacility = document.getElementById('blackoutFacility');
+      const blackoutList = document.getElementById('blackoutList');
+      const blackoutForm = document.getElementById('blackoutForm');
+      const monthState = new Date();
+      monthState.setDate(1);
+
+      function esc(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function dateKey(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      }
+
+      function formatDate(value) {
+        return value ? new Date(`${value}T00:00:00`).toLocaleDateString() : 'N/A';
+      }
+
+      function shortTime(value) {
+        return value ? String(value).slice(0, 5) : '';
+      }
+
+      function daysBetween(start, end) {
+        const days = [];
+        const cursor = new Date(`${start}T00:00:00`);
+        const last = new Date(`${end}T00:00:00`);
+        while (cursor <= last) {
+          days.push(dateKey(cursor));
+          cursor.setDate(cursor.getDate() + 1);
+        }
+        return days;
+      }
+
+      async function api(url, options = {}) {
+        const res = await fetch(url, {
+          ...options,
+          headers: {
+            ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+            ...authHeader,
+            ...(options.headers || {}),
+          },
+          credentials: 'same-origin',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Request failed');
+        return data;
+      }
+
+      async function loadFacilities() {
+        const facilities = await api('/api/admin/facilities');
+        const options = facilities.map((f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
+        facilityFilter.insertAdjacentHTML('beforeend', options);
+        blackoutFacility.insertAdjacentHTML('beforeend', options);
+      }
+
+      function renderCalendar(data) {
+        const year = data.year;
+        const monthIndex = data.month - 1;
+        const first = new Date(year, monthIndex, 1);
+        const last = new Date(year, monthIndex + 1, 0);
+        const offset = (first.getDay() + 6) % 7;
+        const totalCells = Math.ceil((offset + last.getDate()) / 7) * 7;
+        const bookingsByDate = new Map();
+        const blackoutsByDate = new Map();
+
+        data.bookings.forEach((booking) => {
+          const list = bookingsByDate.get(booking.date) || [];
+          list.push(booking);
+          bookingsByDate.set(booking.date, list);
+        });
+
+        data.blackouts.forEach((blackout) => {
+          daysBetween(blackout.start_date, blackout.end_date).forEach((day) => {
+            const list = blackoutsByDate.get(day) || [];
+            list.push(blackout);
+            blackoutsByDate.set(day, list);
+          });
+        });
+
+        monthLabel.textContent = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        const header = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          .map((day) => `<div class="calendar-weekday">${day}</div>`)
+          .join('');
+
+        let cells = '';
+        for (let i = 0; i < totalCells; i++) {
+          const dayNumber = i - offset + 1;
+          if (dayNumber < 1 || dayNumber > last.getDate()) {
+            cells += '<div class="calendar-day is-muted"></div>';
+            continue;
+          }
+
+          const current = new Date(year, monthIndex, dayNumber);
+          const key = dateKey(current);
+          const bookings = bookingsByDate.get(key) || [];
+          const blackouts = blackoutsByDate.get(key) || [];
+          const classes = ['calendar-day'];
+          if (bookings.length) classes.push('has-bookings');
+          if (blackouts.length) classes.push('has-blackout');
+          if (key === dateKey(new Date())) classes.push('is-today');
+
+          const events = [
+            ...blackouts.slice(0, 2).map((item) => `
+              <div class="calendar-event calendar-event-blocked">
+                <strong>${esc(item.facility_name || 'Entire resort')}</strong>
+                <span>${esc(item.reason || 'Blocked')}</span>
+              </div>
+            `),
+            ...bookings.slice(0, 3).map((item) => `
+              <div class="calendar-event ${item.payment_status === 'paid' ? 'calendar-event-paid' : 'calendar-event-pending'}">
+                <strong>${esc(item.facility_name)}</strong>
+                <span>${esc(shortTime(item.start_time))} ${esc(item.user_name)}</span>
+              </div>
+            `),
+          ].join('');
+
+          const more = bookings.length + blackouts.length > 5
+            ? `<div class="calendar-more">+${bookings.length + blackouts.length - 5} more</div>`
+            : '';
+
+          cells += `
+            <div class="${classes.join(' ')}">
+              <div class="calendar-day-number">${dayNumber}</div>
+              <div class="calendar-events">${events}${more}</div>
+            </div>
+          `;
+        }
+
+        calendarEl.innerHTML = header + cells;
+      }
+
+      function renderBlackouts(rows) {
+        if (!rows.length) {
+          blackoutList.innerHTML = '<div class="table-empty">No blackout windows configured.</div>';
+          return;
+        }
+
+        blackoutList.innerHTML = rows.map((row) => `
+          <div class="blackout-item">
+            <div>
+              <strong>${esc(row.facility_name || 'Entire resort')}</strong>
+              <span>${esc(formatDate(row.start_date))} - ${esc(formatDate(row.end_date))}</span>
+              <p>${esc(row.reason || 'Unavailable')}</p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" data-delete-blackout="${esc(row.id)}">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        `).join('');
+        window.lucide?.createIcons();
+      }
+
+      async function loadCalendar() {
+        calendarEl.innerHTML = '<div class="table-empty">Loading calendar...</div>';
+        const params = new URLSearchParams({
+          year: monthState.getFullYear(),
+          month: monthState.getMonth() + 1,
+        });
+        if (facilityFilter.value) params.set('facilityId', facilityFilter.value);
+        renderCalendar(await api(`/api/admin/calendar?${params.toString()}`));
+      }
+
+      async function loadBlackouts() {
+        renderBlackouts(await api('/api/admin/blackouts'));
+      }
+
+      document.getElementById('prevMonthBtn').addEventListener('click', async () => {
+        monthState.setMonth(monthState.getMonth() - 1);
+        await loadCalendar();
+      });
+
+      document.getElementById('nextMonthBtn').addEventListener('click', async () => {
+        monthState.setMonth(monthState.getMonth() + 1);
+        await loadCalendar();
+      });
+
+      facilityFilter.addEventListener('change', loadCalendar);
+
+      blackoutForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const payload = {
+          facility_id: blackoutFacility.value || null,
+          start_date: document.getElementById('blackoutStart').value,
+          end_date: document.getElementById('blackoutEnd').value,
+          reason: document.getElementById('blackoutReason').value,
+        };
+        await api('/api/admin/blackouts', { method: 'POST', body: JSON.stringify(payload) });
+        blackoutForm.reset();
+        await Promise.all([loadCalendar(), loadBlackouts()]);
+      });
+
+      blackoutList.addEventListener('click', async (event) => {
+        const btn = event.target.closest('[data-delete-blackout]');
+        if (!btn) return;
+        await api(`/api/admin/blackouts/${encodeURIComponent(btn.dataset.deleteBlackout)}`, { method: 'DELETE' });
+        await Promise.all([loadCalendar(), loadBlackouts()]);
+      });
+
+      (async () => {
+        try {
+          await loadFacilities();
+          await Promise.all([loadCalendar(), loadBlackouts()]);
+        } catch (err) {
+          calendarEl.innerHTML = `<div class="table-empty">${esc(err.message)}</div>`;
+        }
+        window.lucide?.createIcons();
+      })();
+    })();
+  </script>
 </body>
 </html>

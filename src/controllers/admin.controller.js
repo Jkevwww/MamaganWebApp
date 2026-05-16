@@ -50,9 +50,27 @@ async function getBookingStatusChart(req, res, next) {
   }
 }
 
+async function getPaymentStatusChart(req, res, next) {
+  try {
+    const data = await adminService.getPaymentStatusChart();
+    res.status(200).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getOccupancyChart(req, res, next) {
   try {
     const data = await adminService.getOccupancyChart();
+    res.status(200).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getCategoryUsageChart(req, res, next) {
+  try {
+    const data = await adminService.getCategoryUsageChart();
     res.status(200).json(data);
   } catch (err) {
     next(err);
@@ -164,6 +182,142 @@ async function listBookings(req, res, next) {
   }
 }
 
+async function getCalendarData(req, res, next) {
+  try {
+    const data = await adminService.getCalendarData(req.query);
+    res.status(200).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listBlackouts(req, res, next) {
+  try {
+    const rows = await adminService.listBlackouts();
+    res.status(200).json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createBlackout(req, res, next) {
+  try {
+    const result = await adminService.createBlackout(req.body);
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: 'BLACKOUT_CREATED',
+      module: 'CALENDAR',
+      targetType: 'BLACKOUT',
+      targetId: result.id,
+      details: req.body,
+      ipAddress,
+      userAgent,
+    });
+    res.status(201).json({ ...result, message: 'Blackout window created' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteBlackout(req, res, next) {
+  try {
+    const success = await adminService.deleteBlackout(req.params.id);
+    if (!success) return res.status(404).json({ message: 'Blackout window not found' });
+
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: 'BLACKOUT_DELETED',
+      module: 'CALENDAR',
+      targetType: 'BLACKOUT',
+      targetId: req.params.id,
+      details: {},
+      ipAddress,
+      userAgent,
+    });
+    res.status(200).json({ message: 'Blackout window deleted' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listPromotions(req, res, next) {
+  try {
+    res.status(200).json(await adminService.listPromotions());
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createPromotion(req, res, next) {
+  try {
+    const result = await adminService.createPromotion(req.body);
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: 'PROMOTION_CREATED',
+      module: 'RATES',
+      targetType: 'PROMOTION',
+      targetId: result.id,
+      details: { ...req.body, code: result.code },
+      ipAddress,
+      userAgent,
+    });
+    res.status(201).json({ ...result, message: 'Promotion created' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deletePromotion(req, res, next) {
+  try {
+    const success = await adminService.deletePromotion(req.params.id);
+    if (!success) return res.status(404).json({ message: 'Promotion not found' });
+    res.status(200).json({ message: 'Promotion deleted' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listSeasonalRates(req, res, next) {
+  try {
+    res.status(200).json(await adminService.listSeasonalRates());
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createSeasonalRate(req, res, next) {
+  try {
+    const result = await adminService.createSeasonalRate(req.body);
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: 'SEASONAL_RATE_CREATED',
+      module: 'RATES',
+      targetType: 'SEASONAL_RATE',
+      targetId: result.id,
+      details: req.body,
+      ipAddress,
+      userAgent,
+    });
+    res.status(201).json({ ...result, message: 'Seasonal rate created' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteSeasonalRate(req, res, next) {
+  try {
+    const success = await adminService.deleteSeasonalRate(req.params.id);
+    if (!success) return res.status(404).json({ message: 'Seasonal rate not found' });
+    res.status(200).json({ message: 'Seasonal rate deleted' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function checkInTicket(req, res, next) {
   try {
     const result = await adminService.checkInTicket(req.body, req.user?.id || null);
@@ -221,7 +375,9 @@ module.exports = {
   getDashboardSummary,
   getRevenueChart,
   getBookingStatusChart,
+  getPaymentStatusChart,
   getOccupancyChart,
+  getCategoryUsageChart,
   getAllFacilities,
   getFacilityById,
   createFacility,
@@ -230,6 +386,16 @@ module.exports = {
   updateFacilityImage,
   deleteFacility,
   listBookings,
+  getCalendarData,
+  listBlackouts,
+  createBlackout,
+  deleteBlackout,
+  listPromotions,
+  createPromotion,
+  deletePromotion,
+  listSeasonalRates,
+  createSeasonalRate,
+  deleteSeasonalRate,
   lookupTicketForCheckIn,
   checkInTicket,
 };

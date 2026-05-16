@@ -1,14 +1,68 @@
 /**
- * Admin Dashboard — stats + charts (empty states when no data).
+ * Admin dashboard: live stats and charts with empty/error states.
  */
 (function () {
   const token = localStorage.getItem('token');
-  const authHeader = { Authorization: `Bearer ${token}` };
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+  const charts = new Map();
 
-  const primary = () => {
-    const v = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
-    return v || '#0d9488';
+  const palette = {
+    primary: '#0d9488',
+    teal: '#14b8a6',
+    green: '#10b981',
+    amber: '#f59e0b',
+    red: '#ef4444',
+    blue: '#2563eb',
+    slate: '#64748b',
+    gray: '#94a3b8',
   };
+
+  function cssVar(name, fallback) {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+  }
+
+  function money(value) {
+    return `PHP ${Number(value || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+
+  function showAlert(message, type = 'error') {
+    const el = document.getElementById('dashboardAlert');
+    if (!el) return;
+    el.className = `dashboard-alert dashboard-alert-${type}`;
+    el.textContent = message;
+  }
+
+  function hideAlert() {
+    const el = document.getElementById('dashboardAlert');
+    if (!el) return;
+    el.className = 'dashboard-alert is-hidden';
+    el.textContent = '';
+  }
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  async function api(url) {
+    const res = await fetch(url, {
+      headers: authHeader,
+      credentials: 'same-origin',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || `Request failed: ${url}`);
+    return data;
+  }
+
+  function hasChartData(data) {
+    const labels = data?.labels || [];
+    const values = data?.values || [];
+    return labels.length > 0 && values.some((value) => Number(value || 0) > 0);
+  }
 
   function showChartMessage(wrap, canvas, message) {
     if (!wrap || !canvas) return;
@@ -28,85 +82,82 @@
     wrap.querySelector('.chart-empty-msg')?.remove();
   }
 
-  async function loadDashboard() {
-    try {
-      const summaryRes = await fetch('/api/admin/dashboard/summary', { headers: authHeader });
-      const stats = await summaryRes.json();
-      renderStats(stats);
+  function renderChart(canvasId, type, data, options, emptyMessage) {
+    const canvas = document.getElementById(canvasId);
+    const wrap = canvas?.closest('.chart-canvas-wrap');
+    if (!canvas) return;
 
-      await Promise.all([
-        loadRevenueChart(),
-        loadBookingStatusChart(),
-        loadOccupancyChart(),
-        loadCategoryChart(),
-      ]);
-    } catch (err) {
-      console.error('Failed to load dashboard:', err);
+    if (!window.Chart) {
+      showChartMessage(wrap, canvas, 'Charts are unavailable. Please check the network connection.');
+      return;
     }
+
+    if (!hasChartData(data)) {
+      charts.get(canvasId)?.destroy();
+      charts.delete(canvasId);
+      showChartMessage(wrap, canvas, emptyMessage);
+      return;
+    }
+
+    clearChartMessage(wrap, canvas);
+    charts.get(canvasId)?.destroy();
+    charts.set(canvasId, new Chart(canvas, { type, data, options }));
   }
 
   function renderStats(stats) {
     const container = document.getElementById('dashboardStats');
     if (!container) return;
+
+    const trend = Number(stats.bookingTrend || 0);
+    const trendClass = trend >= 0 ? 'trend-up' : 'trend-down';
+    const trendSymbol = trend >= 0 ? 'Up' : 'Down';
+
     container.innerHTML = `
       <div class="stat-card">
-        <div class="stat-label">Total Bookings</div>
-        <div class="stat-value">${stats.totalBookings || 0}</div>
-        <div class="stat-trend ${stats.bookingTrend >= 0 ? 'trend-up' : 'trend-down'}">
-           ${stats.bookingTrend >= 0 ? '↑' : '↓'} ${Math.abs(stats.bookingTrend || 0)}% from last month
-        </div>
+        <div class="stat-label">Total bookings</div>
+        <div class="stat-value">${Number(stats.totalBookings || 0).toLocaleString()}</div>
+        <div class="stat-trend ${trendClass}">${trendSymbol} ${Math.abs(trend)}% from last month</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Pending Reviews</div>
-        <div class="stat-value stat-value-accent">${stats.pendingBookings || 0}</div>
-        <div class="stat-sub">Action required</div>
+        <div class="stat-label">Pending bookings</div>
+        <div class="stat-value stat-value-accent">${Number(stats.pendingBookings || 0).toLocaleString()}</div>
+        <div class="stat-sub">${Number(stats.approvedBookings || 0).toLocaleString()} approved bookings</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Monthly Revenue</div>
-        <div class="stat-value">₱${(stats.monthlyRevenue || 0).toLocaleString()}</div>
-        <div class="stat-trend trend-up">↑ 12% vs last month</div>
+        <div class="stat-label">Monthly revenue</div>
+        <div class="stat-value">${money(stats.monthlyRevenue)}</div>
+        <div class="stat-sub">${Number(stats.paidBookings || 0).toLocaleString()} paid bookings</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Today's Check-ins</div>
-        <div class="stat-value">${stats.todayCheckins || 0}</div>
-        <div class="stat-sub">${stats.availableUnits || 0} units currently free</div>
+        <div class="stat-label">Today</div>
+        <div class="stat-value">${Number(stats.todayBookings || 0).toLocaleString()}</div>
+        <div class="stat-sub">${Number(stats.todayCheckins || 0).toLocaleString()} checked in</div>
       </div>
     `;
+
+    setText('focusPendingBookings', Number(stats.pendingBookings || 0).toLocaleString());
+    setText('focusPendingPayments', Number(stats.pendingPayments || 0).toLocaleString());
+    setText('focusFailedPayments', Number(stats.failedPayments || 0).toLocaleString());
   }
 
   async function loadRevenueChart() {
-    const canvas = document.getElementById('revenueChart');
-    const wrap = canvas?.closest('.chart-canvas-wrap');
-    if (!canvas) return;
-
-    const res = await fetch('/api/admin/dashboard/revenue-chart', { headers: authHeader });
-    const data = await res.json();
-    const labels = data.labels || [];
-    const values = data.values || [];
-
-    if (!labels.length || !values.length) {
-      showChartMessage(wrap, canvas, 'No paid revenue data for the selected period yet.');
-      return;
-    }
-    clearChartMessage(wrap, canvas);
-
-    const col = primary();
-    new Chart(canvas, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Revenue (PHP)',
-            data: values,
-            borderColor: col,
-            backgroundColor: col + '22',
-            fill: true,
-            tension: 0.4,
-          },
-        ],
+    const data = await api('/api/admin/dashboard/revenue-chart');
+    const primary = cssVar('--color-primary', palette.primary);
+    renderChart(
+      'revenueChart',
+      'line',
+      {
+        labels: data.labels || [],
+        datasets: [{
+          label: 'Revenue',
+          data: data.values || [],
+          borderColor: primary,
+          backgroundColor: `${primary}22`,
+          fill: true,
+          tension: 0.35,
+        }],
       },
-      options: {
+      {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
@@ -115,111 +166,119 @@
           x: { grid: { display: false } },
         },
       },
-    });
+      'No paid revenue data yet.'
+    );
   }
 
   async function loadBookingStatusChart() {
-    const canvas = document.getElementById('statusChart');
-    const wrap = canvas?.closest('.chart-canvas-wrap');
-    if (!canvas) return;
-
-    const res = await fetch('/api/admin/dashboard/booking-status-chart', { headers: authHeader });
-    const data = await res.json();
-    const labels = data.labels || [];
-    const values = data.values || [];
-
-    if (!labels.length || !values.length) {
-      showChartMessage(wrap, canvas, 'No booking status data yet.');
-      return;
-    }
-    clearChartMessage(wrap, canvas);
-
-    new Chart(canvas, {
-      type: 'doughnut',
-      data: {
-        labels,
-        datasets: [
-          {
-            data: values,
-            backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#64748b', '#0d9488', '#94a3b8'],
-          },
-        ],
+    const data = await api('/api/admin/dashboard/booking-status-chart');
+    renderChart(
+      'statusChart',
+      'doughnut',
+      {
+        labels: data.labels || [],
+        datasets: [{
+          data: data.values || [],
+          backgroundColor: [palette.green, palette.amber, palette.red, palette.slate],
+        }],
       },
-      options: {
+      {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-          legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16 } },
-        },
+        cutout: '68%',
+        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14 } } },
       },
-    });
+      'No booking status data yet.'
+    );
+  }
+
+  async function loadPaymentStatusChart() {
+    const data = await api('/api/admin/dashboard/payment-status-chart');
+    renderChart(
+      'paymentStatusChart',
+      'doughnut',
+      {
+        labels: data.labels || [],
+        datasets: [{
+          data: data.values || [],
+          backgroundColor: [palette.green, palette.amber, palette.red, palette.blue, palette.gray],
+        }],
+      },
+      {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '68%',
+        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14 } } },
+      },
+      'No payment status data yet.'
+    );
   }
 
   async function loadOccupancyChart() {
-    const canvas = document.getElementById('occupancyChart');
-    const wrap = canvas?.closest('.chart-canvas-wrap');
-    if (!canvas) return;
-
-    const res = await fetch('/api/admin/dashboard/occupancy-chart', { headers: authHeader });
-    const data = await res.json();
-    const labels = data.labels || [];
-    const values = data.values || [];
-
-    if (!labels.length || !values.length) {
-      showChartMessage(wrap, canvas, 'No occupancy data available.');
-      return;
-    }
-    clearChartMessage(wrap, canvas);
-
-    new Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Occupancy Rate (%)',
-            data: values,
-            backgroundColor: primary(),
-            borderRadius: 6,
-          },
-        ],
+    const data = await api('/api/admin/dashboard/occupancy-chart');
+    renderChart(
+      'occupancyChart',
+      'bar',
+      {
+        labels: data.labels || [],
+        datasets: [{
+          label: 'Occupancy rate',
+          data: data.values || [],
+          backgroundColor: cssVar('--color-primary', palette.primary),
+          borderRadius: 7,
+        }],
       },
-      options: {
+      {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          y: { beginAtZero: true, max: 100 },
+          y: { beginAtZero: true, max: 100, ticks: { callback: (value) => `${value}%` } },
           x: { grid: { display: false } },
         },
       },
-    });
+      'No occupancy data for the next 7 days.'
+    );
   }
 
   async function loadCategoryChart() {
-    const canvas = document.getElementById('categoryChart');
-    const wrap = canvas?.closest('.chart-canvas-wrap');
-    if (!canvas) return;
-
-    clearChartMessage(wrap, canvas);
-    new Chart(canvas, {
-      type: 'pie',
-      data: {
-        labels: ['Cottages', 'Cabanas', 'Equipment'],
-        datasets: [
-          {
-            data: [45, 30, 25],
-            backgroundColor: ['#14b8a6', '#d4c4a8', '#ea580c'],
-          },
-        ],
+    const data = await api('/api/admin/dashboard/category-usage-chart');
+    renderChart(
+      'categoryChart',
+      'pie',
+      {
+        labels: data.labels || [],
+        datasets: [{
+          data: data.values || [],
+          backgroundColor: [palette.teal, palette.blue, palette.amber, palette.slate],
+        }],
       },
-      options: {
+      {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } },
+        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14 } } },
       },
-    });
+      'No category usage data yet.'
+    );
+  }
+
+  async function loadDashboard() {
+    try {
+      hideAlert();
+      const stats = await api('/api/admin/dashboard/summary');
+      renderStats(stats);
+
+      await Promise.all([
+        loadRevenueChart(),
+        loadBookingStatusChart(),
+        loadPaymentStatusChart(),
+        loadOccupancyChart(),
+        loadCategoryChart(),
+      ]);
+    } catch (err) {
+      console.error('Failed to load dashboard:', err);
+      showAlert(err.message || 'Unable to load dashboard data.');
+    }
   }
 
   loadDashboard();

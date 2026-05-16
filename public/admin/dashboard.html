@@ -15,8 +15,10 @@
 
   <header class="page-header">
     <h1 class="page-title">Dashboard</h1>
-    <p class="page-subtitle">Key metrics for Mamagan bookings and revenue.</p>
+    <p class="page-subtitle">Monitor bookings, payment health, revenue, and facility usage.</p>
   </header>
+
+  <div id="dashboardAlert" class="dashboard-alert is-hidden" role="status" aria-live="polite"></div>
 
   <div class="dashboard-stats-grid" id="dashboardStats">
     <div class="stat-card">
@@ -54,15 +56,41 @@
 
   <div class="charts-grid cols-2">
     <div class="chart-card">
+      <h3>Payment Status</h3>
+      <div class="chart-canvas-wrap">
+        <canvas id="paymentStatusChart" height="240"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
       <h3>Facility Occupancy</h3>
       <div class="chart-canvas-wrap">
         <canvas id="occupancyChart" height="240"></canvas>
       </div>
     </div>
+  </div>
+
+  <div class="charts-grid cols-2">
     <div class="chart-card">
       <h3>Category Usage</h3>
       <div class="chart-canvas-wrap">
         <canvas id="categoryChart" height="240"></canvas>
+      </div>
+    </div>
+    <div class="chart-card dashboard-guidance-card">
+      <h3>Operational Focus</h3>
+      <div class="dashboard-focus-list">
+        <div>
+          <span>Pending bookings</span>
+          <strong id="focusPendingBookings">0</strong>
+        </div>
+        <div>
+          <span>Pending payments</span>
+          <strong id="focusPendingPayments">0</strong>
+        </div>
+        <div>
+          <span>Failed payments</span>
+          <strong id="focusFailedPayments">0</strong>
+        </div>
       </div>
     </div>
   </div>

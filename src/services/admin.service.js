@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const { AppError } = require('../middleware/error');
 const qrUtils = require('../utils/qr');
+const crypto = require('crypto');
 
 const FACILITY_COLUMNS = `
   id, name, category, size, description, image_url, inventory_count,
@@ -78,6 +79,23 @@ function validatePriceRange(min, max, minField, maxField) {
   if (min !== null && max !== null && max < min) {
     throw new AppError(`${maxField} must be greater than or equal to ${minField}`, 400);
   }
+}
+
+function formatLocalDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function normalizePromoCode(value) {
+  return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+async function generateUniquePromoCode() {
+  for (let i = 0; i < 8; i++) {
+    const code = `MAMA${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const [rows] = await pool.query('SELECT id FROM promotions WHERE code = ? LIMIT 1', [code]);
+    if (rows.length === 0) return code;
+  }
+  throw new AppError('Unable to generate a unique promo code', 500);
 }
 
 function normalizeFacilityPayload(input = {}, existing = null) {
@@ -179,37 +197,65 @@ function normalizeFacilityPayload(input = {}, existing = null) {
 }
 
 async function getDashboardSummary() {
-  const [[totalBookings]] = await pool.query('SELECT COUNT(*) as count FROM bookings');
-  const [[pendingBookings]] = await pool.query("SELECT COUNT(*) as count FROM bookings WHERE status = 'pending'");
+  const [[totals]] = await pool.query(`
+    SELECT
+      COUNT(*) AS total_bookings,
+      SUM(status = 'pending') AS pending_bookings,
+      SUM(status = 'approved') AS approved_bookings,
+      SUM(status = 'cancelled') AS cancelled_bookings,
+      SUM(payment_status = 'paid') AS paid_bookings,
+      SUM(payment_status = 'pending') AS pending_payments,
+      SUM(payment_status = 'failed') AS failed_payments
+    FROM bookings
+  `);
   const [[monthlyRevenue]] = await pool.query(
-    "SELECT SUM(total_amount) as total FROM bookings WHERE payment_status = 'paid' AND MONTH(date) = MONTH(CURRENT_DATE())"
+    "SELECT COALESCE(SUM(total_amount), 0) AS total FROM bookings WHERE payment_status = 'paid' AND YEAR(date) = YEAR(CURRENT_DATE()) AND MONTH(date) = MONTH(CURRENT_DATE())"
   );
-  const [[todayCheckins]] = await pool.query("SELECT COUNT(*) as count FROM bookings WHERE date = CURRENT_DATE() AND status = 'approved'");
-  const [[totalUnits]] = await pool.query('SELECT SUM(inventory_count) as count FROM facilities WHERE active = 1 AND deleted_at IS NULL');
+  const [[currentMonthBookings]] = await pool.query(
+    "SELECT COUNT(*) AS count FROM bookings WHERE YEAR(date) = YEAR(CURRENT_DATE()) AND MONTH(date) = MONTH(CURRENT_DATE())"
+  );
+  const [[previousMonthBookings]] = await pool.query(
+    "SELECT COUNT(*) AS count FROM bookings WHERE date >= DATE_FORMAT(CURRENT_DATE() - INTERVAL 1 MONTH, '%Y-%m-01') AND date < DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')"
+  );
+  const [[todayBookings]] = await pool.query("SELECT COUNT(*) AS count FROM bookings WHERE date = CURRENT_DATE() AND status != 'cancelled'");
+  const [[todayCheckins]] = await pool.query("SELECT COUNT(*) AS count FROM tickets WHERE DATE(checked_in_at) = CURRENT_DATE()");
+  const [[totalUnits]] = await pool.query('SELECT COALESCE(SUM(inventory_count), 0) AS count FROM facilities WHERE active = 1 AND deleted_at IS NULL');
+
+  const currentCount = Number(currentMonthBookings.count || 0);
+  const previousCount = Number(previousMonthBookings.count || 0);
+  const bookingTrend = previousCount > 0
+    ? Math.round(((currentCount - previousCount) / previousCount) * 100)
+    : (currentCount > 0 ? 100 : 0);
 
   return {
-    totalBookings: totalBookings.count,
-    pendingBookings: pendingBookings.count,
-    monthlyRevenue: monthlyRevenue.total || 0,
-    todayCheckins: todayCheckins.count,
-    availableUnits: totalUnits.count || 0,
-    bookingTrend: 15,
+    totalBookings: Number(totals.total_bookings || 0),
+    pendingBookings: Number(totals.pending_bookings || 0),
+    approvedBookings: Number(totals.approved_bookings || 0),
+    cancelledBookings: Number(totals.cancelled_bookings || 0),
+    paidBookings: Number(totals.paid_bookings || 0),
+    pendingPayments: Number(totals.pending_payments || 0),
+    failedPayments: Number(totals.failed_payments || 0),
+    monthlyRevenue: Number(monthlyRevenue.total || 0),
+    todayBookings: Number(todayBookings.count || 0),
+    todayCheckins: Number(todayCheckins.count || 0),
+    availableUnits: Number(totalUnits.count || 0),
+    bookingTrend,
   };
 }
 
 async function getRevenueChart() {
   const [rows] = await pool.query(`
-    SELECT DATE_FORMAT(date, '%b') as label, SUM(total_amount) as value
+    SELECT DATE_FORMAT(date, '%b %Y') AS label, COALESCE(SUM(total_amount), 0) AS value
     FROM bookings
     WHERE payment_status = 'paid'
-    GROUP BY MONTH(date), DATE_FORMAT(date, '%b')
+      AND date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
+    GROUP BY YEAR(date), MONTH(date), DATE_FORMAT(date, '%b %Y')
     ORDER BY MIN(date) ASC
-    LIMIT 6
   `);
 
   return {
     labels: rows.map((r) => r.label),
-    values: rows.map((r) => r.value),
+    values: rows.map((r) => Number(r.value || 0)),
   };
 }
 
@@ -222,14 +268,66 @@ async function getBookingStatusChart() {
 
   return {
     labels: rows.map((r) => String(r.label).toUpperCase()),
-    values: rows.map((r) => r.value),
+    values: rows.map((r) => Number(r.value || 0)),
+  };
+}
+
+async function getPaymentStatusChart() {
+  const [rows] = await pool.query(`
+    SELECT COALESCE(payment_status, 'pending') AS label, COUNT(*) AS value
+    FROM bookings
+    GROUP BY COALESCE(payment_status, 'pending')
+  `);
+
+  return {
+    labels: rows.map((r) => String(r.label).toUpperCase()),
+    values: rows.map((r) => Number(r.value || 0)),
   };
 }
 
 async function getOccupancyChart() {
+  const [rows] = await pool.query(`
+    SELECT
+      DATE_FORMAT(d.day, '%a') AS label,
+      LEAST(
+        100,
+        ROUND((COALESCE(SUM(b.quantity), 0) / NULLIF((SELECT COALESCE(SUM(inventory_count), 0) FROM facilities WHERE active = 1 AND deleted_at IS NULL), 0)) * 100)
+      ) AS value
+    FROM (
+      SELECT CURRENT_DATE() AS day
+      UNION ALL SELECT CURRENT_DATE() + INTERVAL 1 DAY
+      UNION ALL SELECT CURRENT_DATE() + INTERVAL 2 DAY
+      UNION ALL SELECT CURRENT_DATE() + INTERVAL 3 DAY
+      UNION ALL SELECT CURRENT_DATE() + INTERVAL 4 DAY
+      UNION ALL SELECT CURRENT_DATE() + INTERVAL 5 DAY
+      UNION ALL SELECT CURRENT_DATE() + INTERVAL 6 DAY
+    ) d
+    LEFT JOIN bookings b
+      ON b.date = d.day
+      AND b.status != 'cancelled'
+    GROUP BY d.day
+    ORDER BY d.day
+  `);
+
   return {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    values: [30, 45, 35, 50, 85, 95, 90],
+    labels: rows.map((r) => r.label),
+    values: rows.map((r) => Number(r.value || 0)),
+  };
+}
+
+async function getCategoryUsageChart() {
+  const [rows] = await pool.query(`
+    SELECT COALESCE(f.category, 'UNKNOWN') AS label, COUNT(b.id) AS value
+    FROM bookings b
+    JOIN facilities f ON f.id = b.facility_id
+    WHERE b.status != 'cancelled'
+    GROUP BY COALESCE(f.category, 'UNKNOWN')
+    ORDER BY value DESC
+  `);
+
+  return {
+    labels: rows.map((r) => String(r.label).replace(/_/g, ' ')),
+    values: rows.map((r) => Number(r.value || 0)),
   };
 }
 
@@ -382,6 +480,218 @@ async function listBookings() {
     LIMIT 400
   `);
   return rows;
+}
+
+async function getCalendarData({ year, month, facilityId } = {}) {
+  const today = new Date();
+  const y = Number.parseInt(year, 10) || today.getFullYear();
+  const m = Number.parseInt(month, 10) || today.getMonth() + 1;
+  const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
+  const endDate = formatLocalDate(new Date(y, m, 0));
+  const params = [startDate, endDate];
+  const facilityFilter = facilityId ? ' AND b.facility_id = ?' : '';
+  if (facilityId) params.push(facilityId);
+
+  const [bookings] = await pool.query(
+    `SELECT
+       b.id,
+       b.facility_id,
+       DATE_FORMAT(b.date, '%Y-%m-%d') AS date,
+       b.start_time,
+       b.end_time,
+       b.status,
+       COALESCE(b.payment_status, 'pending') AS payment_status,
+       COALESCE(b.quantity, 1) AS quantity,
+       COALESCE(b.guest_count, 1) AS guest_count,
+       u.name AS user_name,
+       f.name AS facility_name
+     FROM bookings b
+     INNER JOIN users u ON u.id = b.user_id
+     INNER JOIN facilities f ON f.id = b.facility_id
+     WHERE b.date BETWEEN ? AND ?
+       AND b.status != 'cancelled'
+       ${facilityFilter}
+     ORDER BY b.date ASC, b.start_time ASC`,
+    params
+  );
+
+  const blackoutParams = [endDate, startDate];
+  const blackoutFacilityFilter = facilityId ? ' AND (bp.facility_id IS NULL OR bp.facility_id = ?)' : '';
+  if (facilityId) blackoutParams.push(facilityId);
+
+  const [blackouts] = await pool.query(
+    `SELECT
+       bp.id,
+       bp.facility_id,
+       DATE_FORMAT(bp.start_date, '%Y-%m-%d') AS start_date,
+       DATE_FORMAT(bp.end_date, '%Y-%m-%d') AS end_date,
+       bp.reason,
+       f.name AS facility_name
+     FROM blackout_periods bp
+     LEFT JOIN facilities f ON f.id = bp.facility_id
+     WHERE bp.start_date <= ?
+       AND bp.end_date >= ?
+       ${blackoutFacilityFilter}
+     ORDER BY bp.start_date ASC, bp.end_date ASC`,
+    blackoutParams
+  );
+
+  return { year: y, month: m, startDate, endDate, bookings, blackouts };
+}
+
+async function listBlackouts() {
+  const [rows] = await pool.query(
+    `SELECT
+       bp.id,
+       bp.facility_id,
+       DATE_FORMAT(bp.start_date, '%Y-%m-%d') AS start_date,
+       DATE_FORMAT(bp.end_date, '%Y-%m-%d') AS end_date,
+       bp.reason,
+       bp.created_at,
+       f.name AS facility_name
+     FROM blackout_periods bp
+     LEFT JOIN facilities f ON f.id = bp.facility_id
+     WHERE bp.end_date >= CURRENT_DATE()
+     ORDER BY bp.start_date DESC, bp.end_date DESC
+     LIMIT 200`
+  );
+  return rows;
+}
+
+async function createBlackout(data = {}) {
+  const facilityId = toNull(data.facility_id);
+  const startDate = toText(data.start_date);
+  const endDate = toText(data.end_date);
+  const reason = toText(data.reason) || 'Unavailable';
+
+  if (!startDate || !endDate) {
+    throw new AppError('start_date and end_date are required', 400);
+  }
+
+  if (endDate < startDate) {
+    throw new AppError('end_date must be on or after start_date', 400);
+  }
+
+  if (facilityId) {
+    await getFacilityByIdAdmin(facilityId);
+  }
+
+  const [result] = await pool.query(
+    `INSERT INTO blackout_periods (facility_id, start_date, end_date, reason)
+     VALUES (?, ?, ?, ?)`,
+    [facilityId || null, startDate, endDate, reason]
+  );
+
+  return { id: result.insertId };
+}
+
+async function deleteBlackout(id) {
+  const [result] = await pool.query('DELETE FROM blackout_periods WHERE id = ?', [id]);
+  return result.affectedRows > 0;
+}
+
+async function listPromotions() {
+  const [rows] = await pool.query(
+    `SELECT
+       p.id, p.code, p.title, p.description, p.facility_id, p.discount_type,
+       p.discount_value, p.min_amount, p.usage_limit, p.used_count,
+       DATE_FORMAT(p.start_date, '%Y-%m-%d') AS start_date,
+       DATE_FORMAT(p.end_date, '%Y-%m-%d') AS end_date,
+       p.active, p.created_at, f.name AS facility_name
+     FROM promotions p
+     LEFT JOIN facilities f ON f.id = p.facility_id
+     ORDER BY p.created_at DESC, p.id DESC
+     LIMIT 200`
+  );
+  return rows;
+}
+
+async function createPromotion(data = {}) {
+  const title = toText(data.title);
+  const description = toText(data.description);
+  const facilityId = toNull(data.facility_id);
+  const discountType = assertEnum('discount_type', toEnum(data.discount_type) || 'PERCENT', new Set(['PERCENT', 'FIXED']), true);
+  const discountValue = toNonNegativeDecimal(data.discount_value, 'discount_value', { required: true });
+  const minAmount = toNonNegativeDecimal(data.min_amount, 'min_amount') || 0;
+  const usageLimit = toNonNegativeInteger(data.usage_limit, 'usage_limit');
+  const startDate = toText(data.start_date);
+  const endDate = toText(data.end_date);
+  const active = toBoolean(data.active, true);
+
+  if (!title) throw new AppError('title is required', 400);
+  if (!startDate || !endDate) throw new AppError('start_date and end_date are required', 400);
+  if (endDate < startDate) throw new AppError('end_date must be on or after start_date', 400);
+  if (discountType === 'PERCENT' && discountValue > 100) {
+    throw new AppError('Percent discount cannot exceed 100', 400);
+  }
+  if (facilityId) await getFacilityByIdAdmin(facilityId);
+
+  let code = normalizePromoCode(data.code);
+  if (!code) {
+    code = await generateUniquePromoCode();
+  } else {
+    const [existing] = await pool.query('SELECT id FROM promotions WHERE code = ? LIMIT 1', [code]);
+    if (existing.length) throw new AppError('Promo code already exists', 400);
+  }
+
+  const [result] = await pool.query(
+    `INSERT INTO promotions (
+      code, title, description, facility_id, discount_type, discount_value,
+      min_amount, usage_limit, start_date, end_date, active
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [code, title, description, facilityId || null, discountType, discountValue, minAmount, usageLimit, startDate, endDate, active]
+  );
+
+  return { id: result.insertId, code };
+}
+
+async function deletePromotion(id) {
+  const [result] = await pool.query('DELETE FROM promotions WHERE id = ?', [id]);
+  return result.affectedRows > 0;
+}
+
+async function listSeasonalRates() {
+  const [rows] = await pool.query(
+    `SELECT
+       sr.id, sr.name, sr.facility_id,
+       DATE_FORMAT(sr.start_date, '%Y-%m-%d') AS start_date,
+       DATE_FORMAT(sr.end_date, '%Y-%m-%d') AS end_date,
+       sr.rate_multiplier, sr.active, sr.created_at,
+       f.name AS facility_name
+     FROM seasonal_rates sr
+     LEFT JOIN facilities f ON f.id = sr.facility_id
+     ORDER BY sr.start_date DESC, sr.id DESC
+     LIMIT 200`
+  );
+  return rows;
+}
+
+async function createSeasonalRate(data = {}) {
+  const name = toText(data.name);
+  const facilityId = toNull(data.facility_id);
+  const startDate = toText(data.start_date);
+  const endDate = toText(data.end_date);
+  const multiplier = toNonNegativeDecimal(data.rate_multiplier, 'rate_multiplier', { required: true });
+  const active = toBoolean(data.active, true);
+
+  if (!name) throw new AppError('name is required', 400);
+  if (!startDate || !endDate) throw new AppError('start_date and end_date are required', 400);
+  if (endDate < startDate) throw new AppError('end_date must be on or after start_date', 400);
+  if (multiplier <= 0) throw new AppError('rate_multiplier must be greater than 0', 400);
+  if (facilityId) await getFacilityByIdAdmin(facilityId);
+
+  const [result] = await pool.query(
+    `INSERT INTO seasonal_rates (name, facility_id, start_date, end_date, rate_multiplier, active)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [name, facilityId || null, startDate, endDate, multiplier, active]
+  );
+
+  return { id: result.insertId };
+}
+
+async function deleteSeasonalRate(id) {
+  const [result] = await pool.query('DELETE FROM seasonal_rates WHERE id = ?', [id]);
+  return result.affectedRows > 0;
 }
 
 function normalizeCheckInRow(row) {
@@ -546,7 +856,9 @@ module.exports = {
   getDashboardSummary,
   getRevenueChart,
   getBookingStatusChart,
+  getPaymentStatusChart,
   getOccupancyChart,
+  getCategoryUsageChart,
   getAllFacilitiesAdmin,
   getFacilityByIdAdmin,
   createFacility,
@@ -555,6 +867,16 @@ module.exports = {
   updateFacilityImage,
   deleteFacility,
   listBookings,
+  getCalendarData,
+  listBlackouts,
+  createBlackout,
+  deleteBlackout,
+  listPromotions,
+  createPromotion,
+  deletePromotion,
+  listSeasonalRates,
+  createSeasonalRate,
+  deleteSeasonalRate,
   getTicketCheckInDetails,
   checkInTicket,
 };

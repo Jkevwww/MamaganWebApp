@@ -27,6 +27,9 @@ router.get('/:id', facilityController.getFacilityById);
 // GET /api/facilities/:id/availability
 router.get('/:id/availability', facilityController.checkAvailability);
 
+// POST /api/facilities/:id/quote
+router.post('/:id/quote', authMiddleware, facilityController.quoteBooking);
+
 // POST /api/facilities/:id/book
 router.post('/:id/book', authMiddleware, facilityController.bookFacility);
 

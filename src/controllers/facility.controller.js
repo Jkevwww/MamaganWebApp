@@ -43,9 +43,28 @@ async function checkAvailability(req, res, next) {
   }
 }
 
+async function quoteBooking(req, res, next) {
+  try {
+    const { date, start_time, startTime, end_time, endTime, quantity, guest_count, bookingType, promo_code } = req.body;
+    const result = await facilityService.quoteBooking({
+      facilityId: req.params.id,
+      date,
+      start_time: start_time || startTime,
+      end_time: end_time || endTime,
+      quantity: parseInt(quantity, 10) || 1,
+      guest_count: parseInt(guest_count, 10) || 1,
+      bookingType,
+      promo_code,
+    });
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function bookFacility(req, res, next) {
   try {
-    const { date, start_time, end_time, quantity, guest_count, notes, bookingType } = req.body;
+    const { date, start_time, end_time, quantity, guest_count, notes, bookingType, promo_code } = req.body;
     
     if (!date || !start_time || !end_time) {
       return res.status(400).json({ message: 'date, start_time, and end_time are required' });
@@ -60,7 +79,8 @@ async function bookFacility(req, res, next) {
       quantity: parseInt(quantity) || 1,
       guest_count: parseInt(guest_count) || 1,
       notes,
-      bookingType
+      bookingType,
+      promo_code
     });
     
     res.status(201).json(result);
@@ -118,6 +138,7 @@ module.exports = {
   getAllFacilities, 
   getFacilityById, 
   checkAvailability, 
+  quoteBooking,
   bookFacility, 
   getUserBookings,
   getBookingById,

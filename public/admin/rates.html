@@ -23,16 +23,18 @@
         <span class="module-icon"><i data-lucide="tags"></i></span>
         <div>
           <h2>Seasonal rates</h2>
-          <p>Set day, night, hourly, and daily pricing by facility type.</p>
+          <p>Apply a multiplier to bookings inside a date window.</p>
         </div>
       </div>
-      <div class="preview-list">
-        <span>Peak season</span>
-        <strong>Ready for rules</strong>
-      </div>
-      <div class="preview-list">
-        <span>Off-season</span>
-        <strong>Base rates active</strong>
+      <div class="rates-action-tile">
+        <div>
+          <strong>New seasonal rule</strong>
+          <span>Set peak pricing for specific travel dates.</span>
+        </div>
+        <button type="button" class="btn btn-primary" id="openSeasonRateModal">
+          <i data-lucide="plus"></i>
+          Add rate
+        </button>
       </div>
     </article>
 
@@ -44,11 +46,386 @@
           <p>Create limited offers with date ranges and booking conditions.</p>
         </div>
       </div>
-      <button type="button" class="btn btn-primary btn-block">New promo rule</button>
+      <div class="rates-action-tile rates-action-tile-accent">
+        <div>
+          <strong>New promo code</strong>
+          <span>Create a discount customers can apply while booking.</span>
+        </div>
+        <button type="button" class="btn btn-primary" id="openPromoModal">
+          <i data-lucide="plus"></i>
+          Add promo
+        </button>
+      </div>
     </article>
   </section>
 
+  <section class="module-grid module-grid-wide" aria-label="Rate rule lists">
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon"><i data-lucide="calendar-range"></i></span>
+        <div>
+          <h2>Seasonal rate rules</h2>
+          <p>Current pricing multipliers applied before promo discounts.</p>
+        </div>
+      </div>
+      <div id="seasonalRateList" class="rate-rule-list"></div>
+    </article>
+
+    <article class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon module-icon-accent"><i data-lucide="ticket-percent"></i></span>
+        <div>
+          <h2>Promotion codes</h2>
+          <p>Share codes with customers to apply discounts during booking.</p>
+        </div>
+      </div>
+      <div id="promoList" class="rate-rule-list"></div>
+    </article>
+  </section>
+
+  <div class="modal-overlay" id="seasonRateModal" role="presentation">
+    <div class="modal modal-dialog rates-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="seasonRateModalTitle">
+      <div class="modal-header">
+        <div>
+          <h2 id="seasonRateModalTitle">Add seasonal rate</h2>
+          <p class="modal-subtitle">Apply a pricing multiplier for selected dates.</p>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="seasonRateModal" aria-label="Close dialog">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="seasonalRateForm" class="rate-form rates-modal-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="seasonName">Rule name</label>
+            <input id="seasonName" class="form-control" type="text" placeholder="Peak season" required>
+          </div>
+          <div class="form-group">
+            <label for="seasonFacility">Facility</label>
+            <select id="seasonFacility" class="form-select">
+              <option value="">All facilities</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="seasonStart">Start date</label>
+              <input id="seasonStart" class="form-control" type="date" required>
+            </div>
+            <div class="form-group">
+              <label for="seasonEnd">End date</label>
+              <input id="seasonEnd" class="form-control" type="date" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="seasonMultiplier">Rate multiplier</label>
+            <input id="seasonMultiplier" class="form-control" type="number" min="0.01" step="0.01" value="1.00" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="seasonRateModal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save seasonal rate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="promoModal" role="presentation">
+    <div class="modal modal-dialog rates-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="promoModalTitle">
+      <div class="modal-header">
+        <div>
+          <h2 id="promoModalTitle">Create promo code</h2>
+          <p class="modal-subtitle">Build a discount rule and date window for bookings.</p>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="promoModal" aria-label="Close dialog">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="promoForm" class="rate-form rates-modal-form">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="promoTitle">Promo name</label>
+              <input id="promoTitle" class="form-control" type="text" placeholder="Summer Saver" required>
+            </div>
+            <div class="form-group">
+              <label for="promoCode">Promo code</label>
+              <input id="promoCode" class="form-control" type="text" placeholder="Auto-generate if blank">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="promoFacility">Facility</label>
+            <select id="promoFacility" class="form-select">
+              <option value="">All facilities</option>
+            </select>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="discountType">Discount type</label>
+              <select id="discountType" class="form-select">
+                <option value="PERCENT">Percent</option>
+                <option value="FIXED">Fixed amount</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="discountValue">Discount value</label>
+              <input id="discountValue" class="form-control" type="number" min="0" step="0.01" required>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="promoStart">Start date</label>
+              <input id="promoStart" class="form-control" type="date" required>
+            </div>
+            <div class="form-group">
+              <label for="promoEnd">End date</label>
+              <input id="promoEnd" class="form-control" type="date" required>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="minAmount">Minimum amount</label>
+              <input id="minAmount" class="form-control" type="number" min="0" step="0.01" value="0">
+            </div>
+            <div class="form-group">
+              <label for="usageLimit">Usage limit</label>
+              <input id="usageLimit" class="form-control" type="number" min="1" placeholder="Unlimited">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="promoModal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create promo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay delete-dialog-overlay" id="rateSuccessModal" role="presentation">
+    <div class="delete-dialog rates-success-dialog" role="dialog" aria-modal="true" aria-labelledby="rateSuccessTitle">
+      <iframe class="delete-dialog-lottie" src="https://lottie.host/embed/b2fee4e8-7844-428a-adcc-3c8f7f698ef7/PxVN7fb25I.lottie" title="Confirm animation"></iframe>
+      <h2 id="rateSuccessTitle">Saved</h2>
+      <p id="rateSuccessMessage">Rate rule has been saved.</p>
+      <div class="delete-dialog-actions delete-dialog-actions-center">
+        <button type="button" class="btn btn-primary" id="rateSuccessOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/assets/js/admin-layout.js"></script>
-  <script>lucide.createIcons();</script>
+  <script>
+    (function () {
+      const token = localStorage.getItem('token');
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const facilitySelects = [document.getElementById('seasonFacility'), document.getElementById('promoFacility')];
+      const seasonalRateList = document.getElementById('seasonalRateList');
+      const promoList = document.getElementById('promoList');
+      const seasonRateModal = document.getElementById('seasonRateModal');
+      const promoModal = document.getElementById('promoModal');
+      const rateSuccessModal = document.getElementById('rateSuccessModal');
+      const rateSuccessMessage = document.getElementById('rateSuccessMessage');
+
+      function esc(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function formatDate(value) {
+        return value ? new Date(`${value}T00:00:00`).toLocaleDateString() : 'N/A';
+      }
+
+      async function api(url, options = {}) {
+        const res = await fetch(url, {
+          ...options,
+          headers: {
+            ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+            ...authHeader,
+            ...(options.headers || {}),
+          },
+          credentials: 'same-origin',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Request failed');
+        return data;
+      }
+
+      function openModal(modal) {
+        modal.classList.add('open');
+      }
+
+      function closeModal(modal) {
+        modal.classList.remove('open');
+      }
+
+      function showSuccess(message) {
+        rateSuccessMessage.textContent = message;
+        openModal(rateSuccessModal);
+      }
+
+      async function loadFacilities() {
+        const facilities = await api('/api/admin/facilities');
+        const options = facilities.map((f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
+        facilitySelects.forEach((select) => select.insertAdjacentHTML('beforeend', options));
+      }
+
+      function renderSeasonalRates(rows) {
+        if (!rows.length) {
+          seasonalRateList.innerHTML = '<div class="table-empty">No seasonal rates yet.</div>';
+          return;
+        }
+        seasonalRateList.innerHTML = rows.map((row) => `
+          <div class="rate-rule-item">
+            <div>
+              <strong>${esc(row.name)}</strong>
+              <span>${esc(row.facility_name || 'All facilities')} · ${esc(formatDate(row.start_date))} - ${esc(formatDate(row.end_date))}</span>
+              <p>${Number(row.rate_multiplier).toFixed(2)}x rate multiplier</p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" data-delete-season="${esc(row.id)}"><i data-lucide="trash-2"></i></button>
+          </div>
+        `).join('');
+        window.lucide?.createIcons();
+      }
+
+      function renderPromotions(rows) {
+        if (!rows.length) {
+          promoList.innerHTML = '<div class="table-empty">No promotions yet.</div>';
+          return;
+        }
+        promoList.innerHTML = rows.map((row) => {
+          const discount = row.discount_type === 'FIXED'
+            ? `PHP ${Number(row.discount_value).toLocaleString()} off`
+            : `${Number(row.discount_value).toLocaleString()}% off`;
+          const usage = row.usage_limit ? `${row.used_count}/${row.usage_limit} used` : `${row.used_count} used`;
+          return `
+            <div class="rate-rule-item">
+              <div>
+                <strong><code>${esc(row.code)}</code> ${esc(row.title)}</strong>
+                <span>${esc(row.facility_name || 'All facilities')} · ${esc(formatDate(row.start_date))} - ${esc(formatDate(row.end_date))}</span>
+                <p>${esc(discount)} · Min PHP ${Number(row.min_amount || 0).toLocaleString()} · ${esc(usage)}</p>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" data-delete-promo="${esc(row.id)}"><i data-lucide="trash-2"></i></button>
+            </div>
+          `;
+        }).join('');
+        window.lucide?.createIcons();
+      }
+
+      async function loadRules() {
+        const [seasonalRates, promotions] = await Promise.all([
+          api('/api/admin/seasonal-rates'),
+          api('/api/admin/promotions'),
+        ]);
+        renderSeasonalRates(seasonalRates);
+        renderPromotions(promotions);
+      }
+
+      document.getElementById('openSeasonRateModal').addEventListener('click', () => {
+        openModal(seasonRateModal);
+        document.getElementById('seasonName').focus();
+      });
+
+      document.getElementById('openPromoModal').addEventListener('click', () => {
+        openModal(promoModal);
+        document.getElementById('promoTitle').focus();
+      });
+
+      document.getElementById('seasonalRateForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await api('/api/admin/seasonal-rates', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: document.getElementById('seasonName').value,
+            facility_id: document.getElementById('seasonFacility').value || null,
+            start_date: document.getElementById('seasonStart').value,
+            end_date: document.getElementById('seasonEnd').value,
+            rate_multiplier: document.getElementById('seasonMultiplier').value,
+            active: true,
+          }),
+        });
+        event.target.reset();
+        document.getElementById('seasonMultiplier').value = '1.00';
+        closeModal(seasonRateModal);
+        showSuccess('Seasonal rate rule has been saved.');
+        await loadRules();
+      });
+
+      document.getElementById('promoForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const result = await api('/api/admin/promotions', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: document.getElementById('promoTitle').value,
+            code: document.getElementById('promoCode').value,
+            facility_id: document.getElementById('promoFacility').value || null,
+            discount_type: document.getElementById('discountType').value,
+            discount_value: document.getElementById('discountValue').value,
+            min_amount: document.getElementById('minAmount').value,
+            usage_limit: document.getElementById('usageLimit').value || null,
+            start_date: document.getElementById('promoStart').value,
+            end_date: document.getElementById('promoEnd').value,
+            active: true,
+          }),
+        });
+        event.target.reset();
+        document.getElementById('minAmount').value = '0';
+        closeModal(promoModal);
+        showSuccess(`Promo created: ${result.code}`);
+        await loadRules();
+      });
+
+      document.addEventListener('click', async (event) => {
+        const closeTarget = event.target.closest('[data-close-modal]');
+        if (closeTarget) {
+          closeModal(document.getElementById(closeTarget.dataset.closeModal));
+          return;
+        }
+
+        if (event.target === seasonRateModal) {
+          closeModal(seasonRateModal);
+          return;
+        }
+
+        if (event.target === promoModal) {
+          closeModal(promoModal);
+          return;
+        }
+
+        if (event.target === rateSuccessModal || event.target.id === 'rateSuccessOkBtn') {
+          closeModal(rateSuccessModal);
+          return;
+        }
+
+        const seasonBtn = event.target.closest('[data-delete-season]');
+        const promoBtn = event.target.closest('[data-delete-promo]');
+        if (seasonBtn) {
+          await api(`/api/admin/seasonal-rates/${encodeURIComponent(seasonBtn.dataset.deleteSeason)}`, { method: 'DELETE' });
+          await loadRules();
+        }
+        if (promoBtn) {
+          await api(`/api/admin/promotions/${encodeURIComponent(promoBtn.dataset.deletePromo)}`, { method: 'DELETE' });
+          await loadRules();
+        }
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        [seasonRateModal, promoModal, rateSuccessModal].forEach(closeModal);
+      });
+
+      (async () => {
+        try {
+          await loadFacilities();
+          await loadRules();
+        } catch (err) {
+          seasonalRateList.innerHTML = `<div class="table-empty">${esc(err.message)}</div>`;
+          promoList.innerHTML = `<div class="table-empty">${esc(err.message)}</div>`;
+        }
+        window.lucide?.createIcons();
+      })();
+    })();
+  </script>
 </body>
 </html>

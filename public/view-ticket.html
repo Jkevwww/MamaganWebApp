@@ -26,20 +26,49 @@
 
   <main class="page-content">
     <div class="ticket-page ticket-page--framed">
-      <div class="container narrow-container">
-        <div class="ticket-brand">
+      <div class="container ticket-container">
+        <div class="ticket-brand print-hidden">
           <a href="/" aria-label="Mamagan home"><img src="/mamagan-logo.svg" alt="Mamagan Logo" height="56"></a>
         </div>
 
         <div class="ticket-card-shell">
           <div class="ticket-card-header">
-            <h2>Booking Confirmation</h2>
-            <p>Show this QR code upon arrival</p>
+            <div class="ticket-card-brand">
+              <img src="/mamagan-logo-white.svg" alt="Mamagan Logo" height="42">
+              <span id="ticketStatusBadge" class="ticket-status-badge">Confirmed</span>
+            </div>
+            <div class="ticket-heading-row">
+              <div>
+                <p class="ticket-eyebrow">Booking Confirmation</p>
+                <h1 id="ticketHeaderFacility">Mamagan Resort Reservation</h1>
+              </div>
+              <div class="ticket-header-id">
+                <span>Booking ID</span>
+                <strong id="ticketHeaderID">#0000</strong>
+              </div>
+            </div>
           </div>
 
           <div class="ticket-card-body">
-            <div id="qr-container" class="ticket-qr-frame">
-              <i class="icon-ticket-qr" data-lucide="qr-code"></i>
+            <section class="ticket-qr-panel" aria-label="Ticket QR code">
+              <div class="ticket-cut-label">
+                <span></span>
+                <strong>Cut here</strong>
+                <span></span>
+              </div>
+              <div class="ticket-cut-area">
+                <div id="qr-container" class="ticket-qr-frame">
+                  <i class="icon-ticket-qr" data-lucide="qr-code"></i>
+                </div>
+                <div class="ticket-reference-block">
+                  <span>Reference No.</span>
+                  <strong id="ticketReference">Loading...</strong>
+                </div>
+              </div>
+            </section>
+
+            <div class="ticket-section-heading">
+              <h2>Reservation Details</h2>
             </div>
 
             <div class="ticket-kv-panel">
@@ -60,8 +89,31 @@
                 <span id="ticketID">#0000</span>
               </div>
               <div class="ticket-kv-row">
-                <span>Reference No.</span>
-                <span id="ticketReference">Loading...</span>
+                <span>Guests</span>
+                <span id="ticketGuests">Loading...</span>
+              </div>
+              <div class="ticket-kv-row">
+                <span>Quantity</span>
+                <span id="ticketQuantity">Loading...</span>
+              </div>
+            </div>
+
+            <div class="ticket-section-heading ticket-section-heading-spaced">
+              <h2>Payment Details</h2>
+            </div>
+
+            <div class="ticket-payment-panel">
+              <div>
+                <span>Status</span>
+                <strong id="ticketPaymentStatus">Loading...</strong>
+              </div>
+              <div>
+                <span>Method</span>
+                <strong id="ticketPaymentMethod">Loading...</strong>
+              </div>
+              <div>
+                <span>Total Paid</span>
+                <strong id="ticketTotal">Loading...</strong>
               </div>
             </div>
           </div>
@@ -100,6 +152,21 @@
       return startText && endText ? `${startText} - ${endText}` : 'N/A';
     }
 
+    function formatMoney(value) {
+      const amount = Number(value || 0);
+      return `PHP ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    function formatPaymentMethod(value) {
+      if (!value) return 'N/A';
+      return String(value).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
     async function checkAuth() {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
@@ -134,11 +201,20 @@
     const bookingId = params.get('id');
 
     function setFallbackTicketDetails() {
-      document.getElementById('ticketFacility').textContent = params.get('facility') || 'N/A';
-      document.getElementById('ticketDate').textContent = params.get('date') || 'N/A';
-      document.getElementById('ticketTime').textContent = params.get('time') || 'N/A';
-      document.getElementById('ticketID').textContent = '#' + String(bookingId || '0000').padStart(4, '0');
-      document.getElementById('ticketReference').textContent = 'Loading...';
+      const facility = params.get('facility') || 'N/A';
+      const bookingLabel = '#' + String(bookingId || '0000').padStart(4, '0');
+      setText('ticketFacility', facility);
+      setText('ticketHeaderFacility', facility === 'N/A' ? 'Mamagan Resort Reservation' : facility);
+      setText('ticketDate', params.get('date') || 'N/A');
+      setText('ticketTime', params.get('time') || 'N/A');
+      setText('ticketID', bookingLabel);
+      setText('ticketHeaderID', bookingLabel);
+      setText('ticketReference', 'Loading...');
+      setText('ticketGuests', 'Loading...');
+      setText('ticketQuantity', 'Loading...');
+      setText('ticketPaymentStatus', 'Loading...');
+      setText('ticketPaymentMethod', 'Loading...');
+      setText('ticketTotal', 'Loading...');
     }
 
     async function loadTicket() {
@@ -159,11 +235,22 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.message || 'Unable to load ticket');
 
-        document.getElementById('ticketFacility').textContent = data.facility_name || 'N/A';
-        document.getElementById('ticketDate').textContent = formatDate(data.date);
-        document.getElementById('ticketTime').textContent = formatTime(data.start_time, data.end_time);
-        document.getElementById('ticketID').textContent = '#' + String(data.id || bookingId).padStart(4, '0');
-        document.getElementById('ticketReference').textContent = data.payment_reference || data.reference_number || 'N/A';
+        const bookingLabel = '#' + String(data.id || bookingId).padStart(4, '0');
+        const paymentStatus = data.payment_status === 'paid' ? 'Paid' : formatPaymentMethod(data.payment_status);
+
+        setText('ticketFacility', data.facility_name || 'N/A');
+        setText('ticketHeaderFacility', data.facility_name || 'Mamagan Resort Reservation');
+        setText('ticketDate', formatDate(data.date));
+        setText('ticketTime', formatTime(data.start_time, data.end_time));
+        setText('ticketID', bookingLabel);
+        setText('ticketHeaderID', bookingLabel);
+        setText('ticketReference', data.payment_reference || data.reference_number || 'N/A');
+        setText('ticketGuests', `${data.guest_count || 1} pax`);
+        setText('ticketQuantity', `${data.quantity || 1} unit(s)`);
+        setText('ticketPaymentStatus', paymentStatus);
+        setText('ticketPaymentMethod', formatPaymentMethod(data.payment_method));
+        setText('ticketTotal', formatMoney(data.total_amount));
+        setText('ticketStatusBadge', data.ticket_status === 'used' ? 'Checked in' : 'Confirmed');
         document.getElementById('qr-container').innerHTML = `<img src="${escHtml(data.qr_data_url)}" alt="QR code for booking #${escHtml(String(data.id || bookingId))}">`;
       } catch (err) {
         showTicketError(err.message);

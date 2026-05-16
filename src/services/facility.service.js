@@ -161,10 +161,116 @@ function calculateTotal(facility, { quantity, guest_count, startTime, endTime, b
   return total;
 }
 
+function roundMoney(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
+}
+
+async function getSeasonalRateForBooking(facilityId, date) {
+  const [rows] = await pool.query(
+    `SELECT id, name, rate_multiplier
+     FROM seasonal_rates
+     WHERE active = 1
+       AND ? BETWEEN start_date AND end_date
+       AND (facility_id IS NULL OR facility_id = ?)
+     ORDER BY facility_id IS NOT NULL DESC, rate_multiplier DESC, id DESC
+     LIMIT 1`,
+    [date, facilityId]
+  );
+  return rows[0] || null;
+}
+
+async function getApplicablePromotion({ promoCode, facilityId, date, subtotal }) {
+  const code = String(promoCode || '').trim().toUpperCase();
+  if (!code) return null;
+
+  const [rows] = await pool.query(
+    `SELECT id, code, title, discount_type, discount_value, min_amount, usage_limit, used_count
+     FROM promotions
+     WHERE active = 1
+       AND UPPER(code) = ?
+       AND ? BETWEEN start_date AND end_date
+       AND (facility_id IS NULL OR facility_id = ?)
+     ORDER BY facility_id IS NOT NULL DESC, id DESC
+     LIMIT 1`,
+    [code, date, facilityId]
+  );
+
+  const promo = rows[0];
+  if (!promo) {
+    throw new AppError('Promo code is invalid or expired', 400);
+  }
+
+  if (promo.usage_limit !== null && promo.used_count >= promo.usage_limit) {
+    throw new AppError('Promo code usage limit has been reached', 400);
+  }
+
+  if (subtotal < Number(promo.min_amount || 0)) {
+    throw new AppError(`Promo code requires a minimum booking amount of PHP ${Number(promo.min_amount).toLocaleString()}`, 400);
+  }
+
+  const discountValue = Number(promo.discount_value || 0);
+  const discountAmount = promo.discount_type === 'FIXED'
+    ? Math.min(discountValue, subtotal)
+    : Math.min(subtotal * (discountValue / 100), subtotal);
+
+  return {
+    id: promo.id,
+    code: promo.code,
+    title: promo.title,
+    discount_type: promo.discount_type,
+    discount_value: discountValue,
+    discount_amount: roundMoney(discountAmount),
+  };
+}
+
+async function quoteBooking({ facilityId, date, start_time, end_time, quantity, guest_count, bookingType, promo_code }) {
+  const facility = await getFacilityById(facilityId);
+  const parsedQuantity = parseInt(quantity, 10) || 1;
+  const parsedGuestCount = parseInt(guest_count, 10) || 1;
+
+  if (!date || !start_time || !end_time) {
+    throw new AppError('date, start_time, and end_time are required', 400);
+  }
+
+  if (facility.capacity_max && parsedGuestCount > (facility.capacity_max * parsedQuantity)) {
+    throw new AppError(`Guest count exceeds maximum capacity (${facility.capacity_max * parsedQuantity} pax)`, 400);
+  }
+
+  const baseAmount = calculateTotal(facility, {
+    quantity: parsedQuantity,
+    guest_count: parsedGuestCount,
+    startTime: start_time,
+    endTime: end_time,
+    bookingType
+  });
+
+  const seasonalRate = await getSeasonalRateForBooking(facilityId, date);
+  const seasonalMultiplier = seasonalRate ? Number(seasonalRate.rate_multiplier || 1) : 1;
+  const subtotal = roundMoney(baseAmount * seasonalMultiplier);
+  const promo = await getApplicablePromotion({
+    promoCode: promo_code,
+    facilityId,
+    date,
+    subtotal,
+  });
+  const discountAmount = promo ? promo.discount_amount : 0;
+  const totalAmount = roundMoney(Math.max(subtotal - discountAmount, 0));
+
+  return {
+    base_amount: roundMoney(baseAmount),
+    seasonal_rate: seasonalRate,
+    seasonal_multiplier: seasonalMultiplier,
+    subtotal_amount: subtotal,
+    discount_amount: discountAmount,
+    total_amount: totalAmount,
+    promo,
+  };
+}
+
 /**
  * Create a new booking
  */
-async function bookFacility({ facilityId, userId, date, start_time, end_time, quantity, guest_count, notes, bookingType }) {
+async function bookFacility({ facilityId, userId, date, start_time, end_time, quantity, guest_count, notes, bookingType, promo_code }) {
   const facility = await getFacilityById(facilityId);
   
   if (facility.capacity_max && guest_count > (facility.capacity_max * quantity)) {
@@ -176,7 +282,17 @@ async function bookFacility({ facilityId, userId, date, start_time, end_time, qu
     throw new AppError(availability.reason, 400);
   }
 
-  const total_amount = calculateTotal(facility, { quantity, guest_count, startTime: start_time, endTime: end_time, bookingType });
+  const quote = await quoteBooking({
+    facilityId,
+    date,
+    start_time,
+    end_time,
+    quantity,
+    guest_count,
+    bookingType,
+    promo_code
+  });
+  const total_amount = quote.total_amount;
   const expires_at = new Date(Date.now() + 15 * 60 * 1000); 
 
   const conn = await pool.getConnection();
@@ -187,17 +303,27 @@ async function bookFacility({ facilityId, userId, date, start_time, end_time, qu
       `INSERT INTO bookings (
         facility_id, user_id, date, start_time, end_time, 
         quantity, guest_count, total_amount, booking_type, 
-        notes, status, payment_status, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?)`,
+        notes, status, payment_status, expires_at,
+        subtotal_amount, discount_amount, promo_code, promo_id, seasonal_rate_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?, ?, ?, ?, ?, ?)`,
       [
         facilityId, userId, date, start_time, end_time, 
         quantity, guest_count, total_amount, bookingType || 'DAY', 
-        notes || null, expires_at
+        notes || null, expires_at,
+        quote.subtotal_amount,
+        quote.discount_amount,
+        quote.promo?.code || null,
+        quote.promo?.id || null,
+        quote.seasonal_rate?.id || null
       ]
     );
 
+    if (quote.promo?.id) {
+      await conn.query('UPDATE promotions SET used_count = used_count + 1 WHERE id = ?', [quote.promo.id]);
+    }
+
     await conn.commit();
-    return { bookingId: result.insertId, status: 'pending', total_amount, expires_at };
+    return { bookingId: result.insertId, status: 'pending', total_amount, expires_at, quote };
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -261,6 +387,9 @@ async function getTicketForBooking(bookingId, userId) {
        b.date,
        b.start_time,
        b.end_time,
+       b.total_amount,
+       b.quantity,
+       b.guest_count,
        b.payment_status,
        b.status AS booking_status,
        f.name AS facility_name,
@@ -324,6 +453,9 @@ async function getTicketForBooking(bookingId, userId) {
     date: booking.date,
     start_time: booking.start_time,
     end_time: booking.end_time,
+    total_amount: booking.total_amount,
+    quantity: booking.quantity,
+    guest_count: booking.guest_count,
     booking_status: booking.booking_status,
     payment_status: booking.payment_status,
     ticket_status: ticketStatus,
@@ -340,6 +472,7 @@ module.exports = {
   getAllFacilities, 
   getFacilityById, 
   checkAvailability, 
+  quoteBooking,
   bookFacility, 
   getUserBookings,
   getBookingById,

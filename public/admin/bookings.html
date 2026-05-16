@@ -23,7 +23,25 @@
         <span class="module-icon"><i data-lucide="calendar-check"></i></span>
         <div>
           <h2>Today</h2>
-          <p>Arrivals and facility usage for the current schedule.</p>
+          <p>Booking status for the current schedule.</p>
+        </div>
+      </div>
+      <div class="status-summary-grid">
+        <div>
+          <span>Total today</span>
+          <strong id="todayTotal">0</strong>
+        </div>
+        <div>
+          <span>Approved</span>
+          <strong id="todayApproved">0</strong>
+        </div>
+        <div>
+          <span>Pending</span>
+          <strong id="todayPending">0</strong>
+        </div>
+        <div>
+          <span>Cancelled</span>
+          <strong id="todayCancelled">0</strong>
         </div>
       </div>
     </article>
@@ -32,20 +50,50 @@
         <span class="module-icon module-icon-accent"><i data-lucide="wallet-cards"></i></span>
         <div>
           <h2>Payments</h2>
-          <p>Track pending, paid, and failed payment states.</p>
+          <p>Payment status is tracked separately from booking approval.</p>
+        </div>
+      </div>
+      <div class="status-summary-grid">
+        <div>
+          <span>Paid</span>
+          <strong id="paymentPaid">0</strong>
+        </div>
+        <div>
+          <span>Pending</span>
+          <strong id="paymentPending">0</strong>
+        </div>
+        <div>
+          <span>Failed</span>
+          <strong id="paymentFailed">0</strong>
+        </div>
+        <div>
+          <span>Refunded</span>
+          <strong id="paymentRefunded">0</strong>
         </div>
       </div>
     </article>
   </section>
 
   <div class="table-toolbar">
-    <label for="bookingStatusFilter" class="form-label">Filter by status</label>
-    <select id="bookingStatusFilter" class="form-select">
-      <option value="">All</option>
-      <option value="pending">Pending</option>
-      <option value="approved">Approved</option>
-      <option value="cancelled">Cancelled</option>
-    </select>
+    <div>
+      <label for="bookingStatusFilter" class="form-label">Booking status</label>
+      <select id="bookingStatusFilter" class="form-select">
+        <option value="">All booking statuses</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div>
+      <label for="paymentStatusFilter" class="form-label">Payment status</label>
+      <select id="paymentStatusFilter" class="form-select">
+        <option value="">All payment statuses</option>
+        <option value="pending">Pending</option>
+        <option value="paid">Paid</option>
+        <option value="failed">Failed</option>
+        <option value="refunded">Refunded</option>
+      </select>
+    </div>
   </div>
 
   <div class="table-card">
@@ -60,7 +108,8 @@
             <th>Time</th>
             <th>Qty / Pax</th>
             <th>Total</th>
-            <th>Status</th>
+            <th>Booking Status</th>
+            <th>Payment Status</th>
           </tr>
         </thead>
         <tbody id="adminBookingsTbody"></tbody>
