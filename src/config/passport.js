@@ -4,6 +4,7 @@ const GitHubStrategy = require('passport-github2').Strategy;
 const axios = require('axios');
 
 const { linkOrCreateOAuthUser } = require('../services/oauth.service');
+const { googleCallbackUrl, githubCallbackUrl } = require('../utils/oauthConfig');
 
 async function fetchGithubVerifiedEmail(accessToken) {
   const { data } = await axios.get('https://api.github.com/user/emails', {
@@ -29,12 +30,13 @@ function setUpPassport() {
   passport.deserializeUser((obj, done) => done(null, obj));
 
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    const callbackURL = googleCallbackUrl();
     passport.use(
       new GoogleStrategy(
         {
           clientID: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          callbackURL: process.env.GOOGLE_CALLBACK_URL,
+          callbackURL,
           passReqToCallback: true,
         },
         async (req, accessToken, refreshToken, profile, done) => {
@@ -71,12 +73,13 @@ function setUpPassport() {
   }
 
   if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+    const callbackURL = githubCallbackUrl();
     passport.use(
       new GitHubStrategy(
         {
           clientID: process.env.GITHUB_CLIENT_ID,
           clientSecret: process.env.GITHUB_CLIENT_SECRET,
-          callbackURL: process.env.GITHUB_CALLBACK_URL,
+          callbackURL,
           scope: ['user:email'],
           passReqToCallback: true,
         },
