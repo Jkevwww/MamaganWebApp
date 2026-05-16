@@ -17,18 +17,25 @@
   ];
 
   function getPageTitle(path) {
-    const link = sidebarLinks.find((l) => l.path === path);
+    const link = sidebarLinks.find((l) => normalizePath(l.path) === normalizePath(path));
     return link ? link.name : 'Admin Panel';
+  }
+
+  function normalizePath(path) {
+    const cleanPath = String(path || '').split('?')[0].replace(/\/+$/, '');
+    return cleanPath || '/';
   }
 
   function closeSidebar() {
     document.getElementById('adminSidebar')?.classList.remove('open');
     document.getElementById('sidebarOverlay')?.classList.remove('visible');
+    document.body.classList.remove('admin-sidebar-open');
   }
 
   function openSidebar() {
     document.getElementById('adminSidebar')?.classList.add('open');
     document.getElementById('sidebarOverlay')?.classList.add('visible');
+    document.body.classList.add('admin-sidebar-open');
   }
 
   function isMobileSidebar() {
@@ -101,12 +108,15 @@
     const user = await getCurrentAdminUser();
     if (!user) return;
 
-    const currentPath = window.location.pathname;
+    const currentPath = normalizePath(window.location.pathname);
 
     const sidebarHtml = `
       <aside class="admin-sidebar" id="adminSidebar" aria-label="Admin navigation">
         <div class="sidebar-header">
-          <img src="/admin-logo.svg" alt="Mamagan Admin" height="35">
+          <a class="sidebar-brand" href="/admin/dashboard.html" aria-label="Mamagan Admin dashboard">
+            <img class="sidebar-brand-full" src="/admin-logo.svg" alt="Mamagan Admin" height="35">
+            <img class="sidebar-brand-mark" src="/favicon.svg" alt="" aria-hidden="true" width="34" height="34">
+          </a>
           <button type="button" class="mobile-toggle" id="sidebarClose" aria-label="Close menu">
             <i data-lucide="x"></i>
           </button>
@@ -116,8 +126,8 @@
             .map(
               (link) => `
               <a href="${link.path}" class="nav-link sidebar-link ${
-                currentPath === link.path ? 'active' : ''
-              }" title="${link.name}">
+                currentPath === normalizePath(link.path) ? 'active' : ''
+              }" title="${link.name}" ${currentPath === normalizePath(link.path) ? 'aria-current="page"' : ''}>
               <img class="sidebar-link-icon" src="/assets/icons/${link.icon}" alt="" aria-hidden="true">
               <span>${link.name}</span>
             </a>
@@ -182,6 +192,14 @@
     document.getElementById('sidebarCollapseToggle')?.addEventListener('click', toggleSidebar);
     document.getElementById('sidebarClose')?.addEventListener('click', closeSidebar);
     document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebar);
+    document.querySelectorAll('.sidebar-link').forEach((link) => {
+      link.addEventListener('click', () => {
+        if (isMobileSidebar()) closeSidebar();
+      });
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeSidebar();
+    });
     window.addEventListener('resize', () => {
       let shouldCollapse = false;
       try {
@@ -190,6 +208,7 @@
         shouldCollapse = false;
       }
       applySidebarCollapsed(shouldCollapse);
+      if (!isMobileSidebar()) closeSidebar();
     });
 
     document.getElementById('adminLogout')?.addEventListener('click', async () => {
