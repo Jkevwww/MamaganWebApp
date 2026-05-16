@@ -265,10 +265,21 @@ async function getTicketForBooking(bookingId, userId) {
        b.status AS booking_status,
        f.name AS facility_name,
        t.qr_token,
-       t.status AS ticket_status
+       t.reference_number,
+       t.status AS ticket_status,
+       p.payment_method,
+       p.provider_payment_id,
+       p.gcash_ref_no
      FROM bookings b
      JOIN facilities f ON f.id = b.facility_id
      LEFT JOIN tickets t ON t.booking_id = b.id
+     LEFT JOIN payments p ON p.id = (
+       SELECT p2.id
+       FROM payments p2
+       WHERE p2.booking_id = b.id
+       ORDER BY (p2.status = 'paid') DESC, p2.updated_at DESC, p2.id DESC
+       LIMIT 1
+     )
      WHERE b.id = ? AND b.user_id = ?`,
     [bookingId, userId]
   );
@@ -283,18 +294,29 @@ async function getTicketForBooking(bookingId, userId) {
   }
 
   let qrToken = booking.qr_token;
+  let referenceNumber = booking.reference_number;
   let ticketStatus = booking.ticket_status;
 
   if (!qrToken) {
     qrToken = qrUtils.generateQrToken(bookingId);
+    referenceNumber = qrUtils.generateTicketReference(bookingId);
     ticketStatus = 'valid';
     await pool.query(
-      "INSERT INTO tickets (booking_id, qr_token, status) VALUES (?, ?, 'valid') ON DUPLICATE KEY UPDATE status='valid'",
-      [bookingId, qrToken]
+      `INSERT INTO tickets (booking_id, qr_token, reference_number, status)
+       VALUES (?, ?, ?, 'valid')
+       ON DUPLICATE KEY UPDATE status='valid', reference_number=COALESCE(reference_number, VALUES(reference_number))`,
+      [bookingId, qrToken, referenceNumber]
+    );
+  } else if (!referenceNumber) {
+    referenceNumber = qrUtils.generateTicketReference(bookingId);
+    await pool.query(
+      'UPDATE tickets SET reference_number = ? WHERE booking_id = ? AND reference_number IS NULL',
+      [referenceNumber, bookingId]
     );
   }
 
-  const qrDataUrl = await qrUtils.generateQrDataUrl(qrToken);
+  const paymentReference = booking.gcash_ref_no || booking.provider_payment_id || referenceNumber;
+  const qrDataUrl = await qrUtils.generateQrDataUrl(qrToken, paymentReference);
 
   return {
     id: booking.id,
@@ -305,6 +327,11 @@ async function getTicketForBooking(bookingId, userId) {
     booking_status: booking.booking_status,
     payment_status: booking.payment_status,
     ticket_status: ticketStatus,
+    reference_number: referenceNumber,
+    payment_reference: paymentReference,
+    payment_method: booking.payment_method,
+    gcash_ref_no: booking.gcash_ref_no,
+    provider_payment_id: booking.provider_payment_id,
     qr_data_url: qrDataUrl
   };
 }

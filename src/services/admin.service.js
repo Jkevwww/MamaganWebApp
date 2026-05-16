@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { AppError } = require('../middleware/error');
+const qrUtils = require('../utils/qr');
 
 const FACILITY_COLUMNS = `
   id, name, category, size, description, image_url, inventory_count,
@@ -383,6 +384,164 @@ async function listBookings() {
   return rows;
 }
 
+function normalizeCheckInRow(row) {
+  const paymentReference = row.gcash_ref_no || row.provider_payment_id || row.reference_number;
+  return {
+    ticketId: row.ticket_id,
+    ticketStatus: row.ticket_status,
+    checkedIn: row.ticket_status === 'used',
+    checkedInAt: row.checked_in_at,
+    referenceNumber: row.reference_number,
+    paymentReference,
+    gcashRefNo: row.gcash_ref_no,
+    providerPaymentId: row.provider_payment_id,
+    paymentMethod: row.payment_method,
+    paymentAmount: row.payment_amount,
+    canCheckIn: row.booking_status !== 'cancelled' && row.payment_status === 'paid' && row.ticket_status === 'valid',
+    booking: {
+      id: row.booking_id,
+      date: row.date,
+      start_time: row.start_time,
+      end_time: row.end_time,
+      status: row.booking_status,
+      payment_status: row.payment_status,
+      total_amount: row.total_amount,
+      quantity: row.quantity,
+      guest_count: row.guest_count,
+      facility_name: row.facility_name,
+      user_name: row.user_name,
+      user_email: row.user_email,
+    },
+  };
+}
+
+function normalizeTicketLookup({ qrPayload, referenceNumber, code } = {}) {
+  const raw = qrPayload || referenceNumber || code;
+  const parsed = qrUtils.parseQrPayload(raw);
+  const qrToken = parsed.qrToken || null;
+  const ref = referenceNumber || parsed.referenceNumber || code || null;
+
+  if (!qrToken && !ref) {
+    throw new AppError('QR code or reference number is required', 400);
+  }
+
+  return {
+    qrToken,
+    referenceNumber: ref ? String(ref).trim() : null,
+    raw: parsed.raw,
+  };
+}
+
+async function getTicketCheckInDetails(input) {
+  const lookup = normalizeTicketLookup(typeof input === 'object' ? input : { qrPayload: input });
+
+  const [rows] = await pool.query(
+    `SELECT
+       t.id AS ticket_id,
+       t.reference_number,
+       t.status AS ticket_status,
+       t.checked_in_at,
+       b.id AS booking_id,
+       b.date,
+       b.start_time,
+       b.end_time,
+       b.status AS booking_status,
+       COALESCE(b.payment_status, 'pending') AS payment_status,
+       COALESCE(b.total_amount, 0) AS total_amount,
+       COALESCE(b.quantity, 1) AS quantity,
+       COALESCE(b.guest_count, 1) AS guest_count,
+       u.name AS user_name,
+       u.email AS user_email,
+       f.name AS facility_name,
+       p.payment_method,
+       p.provider_payment_id,
+       p.gcash_ref_no,
+       p.amount AS payment_amount
+     FROM tickets t
+     INNER JOIN bookings b ON b.id = t.booking_id
+     INNER JOIN users u ON u.id = b.user_id
+     INNER JOIN facilities f ON f.id = b.facility_id
+     LEFT JOIN payments p ON p.id = (
+       SELECT p2.id
+       FROM payments p2
+       WHERE p2.booking_id = b.id
+       ORDER BY (p2.status = 'paid') DESC, p2.updated_at DESC, p2.id DESC
+       LIMIT 1
+     )
+     WHERE t.qr_token = ?
+        OR t.reference_number = ?
+        OR EXISTS (
+          SELECT 1
+          FROM payments px
+          WHERE px.booking_id = b.id
+            AND (px.gcash_ref_no = ? OR px.provider_payment_id = ?)
+        )
+     LIMIT 1`,
+    [lookup.qrToken, lookup.referenceNumber, lookup.referenceNumber, lookup.referenceNumber]
+  );
+
+  if (rows.length === 0) {
+    throw new AppError('Ticket QR code or reference number was not found', 404);
+  }
+
+  const details = normalizeCheckInRow(rows[0]);
+  return {
+    status: 'found',
+    message: details.canCheckIn
+      ? 'Paid booking found. Review details before confirming check-in.'
+      : 'Booking found. Review the status before check-in.',
+    ...details,
+  };
+}
+
+async function checkInTicket(input, checkedInBy = null) {
+  const details = await getTicketCheckInDetails(input);
+
+  if (details.booking.status === 'cancelled') {
+    throw new AppError('This booking has been cancelled', 400);
+  }
+
+  if (details.booking.payment_status !== 'paid') {
+    throw new AppError('This booking is not paid yet', 400);
+  }
+
+  if (details.ticketStatus === 'used') {
+    return {
+      ...details,
+      status: 'already_checked_in',
+      message: 'This guest has already been checked in',
+    };
+  }
+
+  if (details.ticketStatus !== 'valid') {
+    throw new AppError(`Ticket is ${details.ticketStatus}`, 400);
+  }
+
+  const [result] = await pool.query(
+    "UPDATE tickets SET status = 'used', checked_in_at = NOW(), checked_in_by = ? WHERE id = ? AND status = 'valid'",
+    [checkedInBy, details.ticketId]
+  );
+
+  if (result.affectedRows === 0) {
+    const refreshed = await getTicketCheckInDetails(input);
+    return {
+      ...refreshed,
+      status: 'already_checked_in',
+      message: 'This guest has already been checked in',
+    };
+  }
+
+  return {
+    ...details,
+    status: 'checked_in',
+    message: 'Paid booking confirmed. Guest checked in.',
+    ticketStatus: 'used',
+    checkedIn: true,
+    checkedInAt: new Date().toISOString(),
+    canCheckIn: false,
+  };
+}
+
 module.exports = {
   getDashboardSummary,
   getRevenueChart,
@@ -396,4 +555,6 @@ module.exports = {
   updateFacilityImage,
   deleteFacility,
   listBookings,
+  getTicketCheckInDetails,
+  checkInTicket,
 };

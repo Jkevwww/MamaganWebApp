@@ -9,12 +9,13 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/css/admin.css">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body class="admin-body">
 
   <header class="page-header">
     <h1 class="page-title">Check-in &amp; QR</h1>
-    <p class="page-subtitle">Scan guest QR tickets and mark arrivals. Connect scanners or manual lookup when the check-in API is ready.</p>
+    <p class="page-subtitle">Scan paid guest tickets and confirm arrivals at the resort.</p>
   </header>
 
   <section class="module-grid" aria-label="Check-in tools">
@@ -27,9 +28,15 @@
         </div>
       </div>
       <div class="qr-frame" aria-label="QR scanner preview">
-        <i data-lucide="scan-line"></i>
+        <video id="scannerVideo" class="qr-video is-hidden" playsinline muted></video>
+        <canvas id="scannerCanvas" class="is-hidden"></canvas>
+        <div id="scannerPlaceholder" class="qr-placeholder">
+          <i data-lucide="scan-line"></i>
+          <span>Camera scanner ready</span>
+        </div>
       </div>
-      <button type="button" class="btn btn-primary btn-block">Start scanner</button>
+      <button type="button" id="startScannerBtn" class="btn btn-primary btn-block">Start scanner</button>
+      <button type="button" id="stopScannerBtn" class="btn btn-secondary btn-block is-hidden">Stop scanner</button>
     </article>
 
     <article class="module-card">
@@ -37,17 +44,268 @@
         <span class="module-icon module-icon-accent"><i data-lucide="search"></i></span>
         <div>
           <h2>Manual lookup</h2>
-          <p>Search by booking ID, guest name, or ticket code.</p>
+          <p>Audit by GCash reference, payment reference, or ticket reference.</p>
         </div>
       </div>
       <div class="form-group">
-        <label for="checkinSearch">Booking or guest</label>
-        <input id="checkinSearch" type="search" class="form-control" placeholder="Search booking">
+        <label for="checkinSearch">Reference number or QR code</label>
+        <input id="checkinSearch" type="search" class="form-control" placeholder="Enter GCash/reference number or paste QR code">
       </div>
+      <button type="button" id="manualCheckInBtn" class="btn btn-primary btn-block">Audit reference</button>
     </article>
   </section>
 
+  <section class="module-card checkin-result-card" aria-live="polite">
+    <div id="checkinStatus" class="checkin-status checkin-status-idle">
+      <i data-lucide="badge-check"></i>
+      <div>
+        <h2>Waiting for ticket</h2>
+        <p>Scan the QR code shown on the guest ticket after successful payment.</p>
+      </div>
+    </div>
+    <div id="checkinDetails" class="checkin-details is-hidden"></div>
+    <button type="button" id="confirmCheckInBtn" class="btn btn-primary btn-block checkin-confirm-btn is-hidden">Confirm check-in</button>
+  </section>
+
   <script src="/assets/js/admin-layout.js"></script>
-  <script>lucide.createIcons();</script>
+  <script>
+    (function () {
+      const token = localStorage.getItem('token');
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const video = document.getElementById('scannerVideo');
+      const canvas = document.getElementById('scannerCanvas');
+      const placeholder = document.getElementById('scannerPlaceholder');
+      const startBtn = document.getElementById('startScannerBtn');
+      const stopBtn = document.getElementById('stopScannerBtn');
+      const manualInput = document.getElementById('checkinSearch');
+      const manualBtn = document.getElementById('manualCheckInBtn');
+      const confirmBtn = document.getElementById('confirmCheckInBtn');
+      const statusBox = document.getElementById('checkinStatus');
+      const detailsBox = document.getElementById('checkinDetails');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      let stream = null;
+      let rafId = null;
+      let processing = false;
+      let lastLookupPayload = null;
+
+      function esc(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function formatDate(value) {
+        return value ? new Date(value).toLocaleDateString() : 'N/A';
+      }
+
+      function formatTime(start, end) {
+        const a = start ? String(start).slice(0, 5) : '';
+        const b = end ? String(end).slice(0, 5) : '';
+        return a && b ? `${a} - ${b}` : 'N/A';
+      }
+
+      function setStatus(type, title, message, icon) {
+        statusBox.className = `checkin-status checkin-status-${type}`;
+        statusBox.innerHTML = `
+          <i data-lucide="${esc(icon)}"></i>
+          <div>
+            <h2>${esc(title)}</h2>
+            <p>${esc(message)}</p>
+          </div>
+        `;
+        window.lucide?.createIcons();
+      }
+
+      function renderDetails(data) {
+        const booking = data.booking || {};
+        detailsBox.classList.remove('is-hidden');
+        confirmBtn.classList.toggle('is-hidden', !data.canCheckIn);
+        detailsBox.innerHTML = `
+          <div class="checkin-detail-grid">
+            <div><span>Guest</span><strong>${esc(booking.user_name || 'N/A')}</strong></div>
+            <div><span>Email</span><strong>${esc(booking.user_email || 'N/A')}</strong></div>
+            <div><span>Facility</span><strong>${esc(booking.facility_name || 'N/A')}</strong></div>
+            <div><span>Booking ID</span><strong>#${esc(String(booking.id || '').padStart(4, '0'))}</strong></div>
+            <div><span>Ticket Reference</span><strong>${esc(data.referenceNumber || 'N/A')}</strong></div>
+            <div><span>Payment Reference</span><strong>${esc(data.paymentReference || 'N/A')}</strong></div>
+            <div><span>GCash Ref</span><strong>${esc(data.gcashRefNo || 'N/A')}</strong></div>
+            <div><span>Payment Method</span><strong>${esc(data.paymentMethod || 'N/A')}</strong></div>
+            <div><span>Date</span><strong>${esc(formatDate(booking.date))}</strong></div>
+            <div><span>Time</span><strong>${esc(formatTime(booking.start_time, booking.end_time))}</strong></div>
+            <div><span>Guests</span><strong>${esc(booking.guest_count || 1)} pax</strong></div>
+            <div><span>Payment</span><strong>${esc(booking.payment_status || 'pending')}</strong></div>
+            <div><span>Ticket</span><strong>${esc(data.ticketStatus || 'N/A')}</strong></div>
+            <div><span>Total</span><strong>PHP ${Number(booking.total_amount || 0).toLocaleString()}</strong></div>
+          </div>
+        `;
+      }
+
+      async function lookupTicket(payload) {
+        const code = String(payload || '').trim();
+        if (!code) {
+          setStatus('error', 'No code entered', 'Scan a QR code or enter a reference number first.', 'alert-circle');
+          return;
+        }
+
+        if (processing) return;
+        processing = true;
+        lastLookupPayload = code;
+        confirmBtn.classList.add('is-hidden');
+        setStatus('busy', 'Checking ticket', 'Loading booking, payment, and ticket details...', 'loader-circle');
+
+        try {
+          const res = await fetch('/api/admin/check-in/lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeader },
+            credentials: 'same-origin',
+            body: JSON.stringify({ code })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message || 'Unable to find ticket');
+
+          if (data.ticketStatus === 'used') {
+            setStatus('warning', 'Already checked in', 'This ticket was already used. Booking details are shown below.', 'circle-alert');
+          } else if ((data.booking?.payment_status || '').toLowerCase() !== 'paid') {
+            setStatus('error', 'Payment not confirmed', 'This booking is not marked as paid. Do not check in yet.', 'x-circle');
+          } else if (data.canCheckIn) {
+            setStatus('success', 'Paid booking found', data.message || 'Review booking details before confirming check-in.', 'check-circle');
+          } else {
+            setStatus('warning', 'Ticket cannot be checked in', data.message || 'Review the booking and ticket status.', 'circle-alert');
+          }
+          renderDetails(data);
+        } catch (err) {
+          detailsBox.classList.add('is-hidden');
+          detailsBox.innerHTML = '';
+          confirmBtn.classList.add('is-hidden');
+          setStatus('error', 'Lookup failed', err.message || 'Ticket could not be verified.', 'x-circle');
+        } finally {
+          processing = false;
+        }
+      }
+
+      async function confirmCheckIn() {
+        if (!lastLookupPayload) {
+          setStatus('error', 'No ticket selected', 'Scan or audit a reference before confirming check-in.', 'alert-circle');
+          return;
+        }
+
+        if (processing) return;
+        processing = true;
+        confirmBtn.disabled = true;
+        setStatus('busy', 'Confirming check-in', 'Updating ticket status...', 'loader-circle');
+
+        try {
+          const res = await fetch('/api/admin/check-in/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeader },
+            credentials: 'same-origin',
+            body: JSON.stringify({ code: lastLookupPayload })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message || 'Unable to confirm check-in');
+
+          if (data.status === 'already_checked_in') {
+            setStatus('warning', 'Already checked in', data.message || 'This ticket was already used.', 'circle-alert');
+          } else {
+            setStatus('success', 'Paid booking confirmed', data.message || 'Guest checked in successfully.', 'check-circle');
+          }
+          renderDetails(data);
+          confirmBtn.classList.add('is-hidden');
+          manualInput.value = '';
+        } catch (err) {
+          setStatus('error', 'Check-in failed', err.message || 'Ticket could not be checked in.', 'x-circle');
+        } finally {
+          processing = false;
+          confirmBtn.disabled = false;
+        }
+      }
+
+      function scanFrame() {
+        if (!stream || processing) {
+          rafId = requestAnimationFrame(scanFrame);
+          return;
+        }
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const result = window.jsQR?.(imageData.data, imageData.width, imageData.height);
+          if (result?.data) {
+            stopScanner();
+            lookupTicket(result.data);
+            return;
+          }
+        }
+
+        rafId = requestAnimationFrame(scanFrame);
+      }
+
+      async function startScanner() {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setStatus('error', 'Camera unavailable', 'This browser does not support camera scanning. Use manual or USB scanner input.', 'camera-off');
+          return;
+        }
+
+        if (!window.jsQR) {
+          setStatus('error', 'Scanner library unavailable', 'The QR scanner script did not load. Use manual or USB scanner input.', 'alert-circle');
+          return;
+        }
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false
+          });
+          video.srcObject = stream;
+          await video.play();
+          video.classList.remove('is-hidden');
+          placeholder.classList.add('is-hidden');
+          startBtn.classList.add('is-hidden');
+          stopBtn.classList.remove('is-hidden');
+          setStatus('busy', 'Scanning', 'Point the camera at the paid ticket QR code.', 'scan-line');
+          rafId = requestAnimationFrame(scanFrame);
+        } catch (err) {
+          setStatus('error', 'Camera access blocked', err.message || 'Allow camera access or use manual input.', 'camera-off');
+        }
+      }
+
+      function stopScanner() {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = null;
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+          stream = null;
+        }
+        video.pause();
+        video.removeAttribute('src');
+        video.srcObject = null;
+        video.classList.add('is-hidden');
+        placeholder.classList.remove('is-hidden');
+        startBtn.classList.remove('is-hidden');
+        stopBtn.classList.add('is-hidden');
+      }
+
+      startBtn.addEventListener('click', startScanner);
+      stopBtn.addEventListener('click', () => {
+        stopScanner();
+        setStatus('idle', 'Scanner stopped', 'Scan the QR code shown on the guest ticket after successful payment.', 'badge-check');
+      });
+      manualBtn.addEventListener('click', () => lookupTicket(manualInput.value));
+      confirmBtn.addEventListener('click', confirmCheckIn);
+      manualInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          lookupTicket(manualInput.value);
+        }
+      });
+      window.addEventListener('beforeunload', stopScanner);
+      window.lucide?.createIcons();
+    })();
+  </script>
 </body>
 </html>

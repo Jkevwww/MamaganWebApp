@@ -44,6 +44,9 @@ router.get('/dashboard/booking-status-chart', adminController.getBookingStatusCh
 router.get('/dashboard/occupancy-chart', adminController.getOccupancyChart);
 
 router.get('/bookings', adminController.listBookings);
+router.post('/check-in/lookup', requirePermission(['SUPER_ADMIN', 'ADMIN', 'STAFF']), adminController.lookupTicketForCheckIn);
+router.post('/check-in/scan', requirePermission(['SUPER_ADMIN', 'ADMIN', 'STAFF']), adminController.checkInTicket);
+router.post('/check-in/confirm', requirePermission(['SUPER_ADMIN', 'ADMIN', 'STAFF']), adminController.checkInTicket);
 
 // Facilities CRUD
 router.get('/facilities', adminController.getAllFacilities);

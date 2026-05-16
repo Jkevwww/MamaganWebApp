@@ -164,6 +164,59 @@ async function listBookings(req, res, next) {
   }
 }
 
+async function checkInTicket(req, res, next) {
+  try {
+    const result = await adminService.checkInTicket(req.body, req.user?.id || null);
+
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: result.status === 'checked_in' ? 'GUEST_CHECKED_IN' : 'GUEST_CHECK_IN_RESCAN',
+      module: 'CHECK_IN',
+      targetType: 'BOOKING',
+      targetId: result.booking?.id,
+      details: {
+        ticket_status: result.ticketStatus,
+        payment_status: result.booking?.payment_status,
+        facility_name: result.booking?.facility_name,
+      },
+      ipAddress,
+      userAgent,
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function lookupTicketForCheckIn(req, res, next) {
+  try {
+    const result = await adminService.getTicketCheckInDetails(req.body);
+
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: 'CHECK_IN_TICKET_LOOKUP',
+      module: 'CHECK_IN',
+      targetType: 'BOOKING',
+      targetId: result.booking?.id,
+      details: {
+        ticket_status: result.ticketStatus,
+        payment_status: result.booking?.payment_status,
+        reference_number: result.referenceNumber,
+        payment_reference: result.paymentReference,
+      },
+      ipAddress,
+      userAgent,
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboardSummary,
   getRevenueChart,
@@ -177,4 +230,6 @@ module.exports = {
   updateFacilityImage,
   deleteFacility,
   listBookings,
+  lookupTicketForCheckIn,
+  checkInTicket,
 };

@@ -51,9 +51,12 @@ async function markBookingPaid(conn, { bookingId, checkoutId, payment, rawPayloa
   );
 
   const qrToken = qrUtils.generateQrToken(bookingId);
+  const referenceNumber = qrUtils.generateTicketReference(bookingId);
   await conn.query(
-    "INSERT INTO tickets (booking_id, qr_token, status) VALUES (?, ?, 'valid') ON DUPLICATE KEY UPDATE status='valid'",
-    [bookingId, qrToken]
+    `INSERT INTO tickets (booking_id, qr_token, reference_number, status)
+     VALUES (?, ?, ?, 'valid')
+     ON DUPLICATE KEY UPDATE status='valid', reference_number=COALESCE(reference_number, VALUES(reference_number))`,
+    [bookingId, qrToken, referenceNumber]
   );
 }
 
@@ -240,9 +243,12 @@ async function processMockSuccess(bookingId, userId) {
 
     // 4. Generate Ticket
     const qrToken = qrUtils.generateQrToken(bookingId);
+    const referenceNumber = qrUtils.generateTicketReference(bookingId);
     await conn.query(
-      "INSERT INTO tickets (booking_id, qr_token, status) VALUES (?, ?, 'valid') ON DUPLICATE KEY UPDATE status='valid'",
-      [bookingId, qrToken]
+      `INSERT INTO tickets (booking_id, qr_token, reference_number, status)
+       VALUES (?, ?, ?, 'valid')
+       ON DUPLICATE KEY UPDATE status='valid', reference_number=COALESCE(reference_number, VALUES(reference_number))`,
+      [bookingId, qrToken, referenceNumber]
     );
 
     await conn.commit();

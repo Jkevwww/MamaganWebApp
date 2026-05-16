@@ -59,6 +59,10 @@
                 <span>Booking ID</span>
                 <span id="ticketID">#0000</span>
               </div>
+              <div class="ticket-kv-row">
+                <span>Reference No.</span>
+                <span id="ticketReference">Loading...</span>
+              </div>
             </div>
           </div>
 
@@ -134,6 +138,7 @@
       document.getElementById('ticketDate').textContent = params.get('date') || 'N/A';
       document.getElementById('ticketTime').textContent = params.get('time') || 'N/A';
       document.getElementById('ticketID').textContent = '#' + String(bookingId || '0000').padStart(4, '0');
+      document.getElementById('ticketReference').textContent = 'Loading...';
     }
 
     async function loadTicket() {
@@ -158,6 +163,7 @@
         document.getElementById('ticketDate').textContent = formatDate(data.date);
         document.getElementById('ticketTime').textContent = formatTime(data.start_time, data.end_time);
         document.getElementById('ticketID').textContent = '#' + String(data.id || bookingId).padStart(4, '0');
+        document.getElementById('ticketReference').textContent = data.payment_reference || data.reference_number || 'N/A';
         document.getElementById('qr-container').innerHTML = `<img src="${escHtml(data.qr_data_url)}" alt="QR code for booking #${escHtml(String(data.id || bookingId))}">`;
       } catch (err) {
         showTicketError(err.message);

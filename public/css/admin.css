@@ -1041,6 +1041,124 @@ body.admin-login-body {
   animation: scan-pulse 1.8s ease-in-out infinite;
 }
 
+.qr-video {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  border-radius: 14px;
+  background: #0f172a;
+}
+
+.qr-placeholder {
+  min-height: 160px;
+  display: grid;
+  gap: 0.55rem;
+  place-items: center;
+  color: #0ea5b7;
+  text-align: center;
+  font-weight: 700;
+}
+
+.checkin-result-card {
+  min-height: 0;
+}
+
+.checkin-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.checkin-status svg {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+}
+
+.checkin-status h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.checkin-status p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.checkin-status-success {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.checkin-status-warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.checkin-status-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.checkin-status-busy {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.checkin-status-idle {
+  color: #0ea5b7;
+}
+
+.checkin-status-busy svg {
+  animation: scan-pulse 1.1s ease-in-out infinite;
+}
+
+.checkin-details {
+  margin-top: 1rem;
+}
+
+.checkin-confirm-btn {
+  margin-top: 1rem;
+}
+
+.checkin-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.checkin-detail-grid div {
+  padding: 0.8rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.checkin-detail-grid span {
+  display: block;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.checkin-detail-grid strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
 .chart-preview {
   min-height: 170px;
   display: flex;
