@@ -45,21 +45,28 @@
   </main>
 
   <script>
-    const bookingId = new URLSearchParams(window.location.search).get('booking_id');
+    const params = new URLSearchParams(window.location.search);
+    const bookingId = params.get('booking_id') || params.get('bookingId') || params.get('id');
+    let retryInFlight = false;
 
     async function checkAuth() {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
-        if (res.ok) {
-          const user = await res.json();
-          const navUser = document.getElementById('navUser');
-          if (navUser) navUser.textContent = user.name || '';
-          document.querySelectorAll('.auth-only').forEach(el => { el.classList.remove('is-hidden'); el.style.display = ''; });
-          document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
-          const lo = document.getElementById('navLogout');
-          if (lo) lo.style.display = 'inline-block';
+        if (!res.ok) {
+          return false;
         }
-      } catch (_) {}
+
+        const user = await res.json();
+        const navUser = document.getElementById('navUser');
+        if (navUser) navUser.textContent = user.name || '';
+        document.querySelectorAll('.auth-only').forEach(el => { el.classList.remove('is-hidden'); el.style.display = ''; });
+        document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
+        const lo = document.getElementById('navLogout');
+        if (lo) lo.style.display = 'inline-block';
+        return true;
+      } catch (_) {
+        return false;
+      }
     }
 
     document.getElementById('navLogout')?.addEventListener('click', async (e) => {
@@ -71,14 +78,63 @@
       window.location.replace('/');
     });
 
-    if (bookingId) {
-      document.getElementById('retryBtn').href = `/booking-details.html?id=${encodeURIComponent(bookingId)}`;
-    } else {
-      document.getElementById('retryBtn').href = '/my-bookings.html';
+    async function retryPayment(event) {
+      event.preventDefault();
+      if (retryInFlight) return;
+      const btn = document.getElementById('retryBtn');
+      if (!bookingId) {
+        window.location.href = '/my-bookings.html';
+        return;
+      }
+
+      retryInFlight = true;
+      btn.textContent = 'Preparing Checkout...';
+      btn.setAttribute('aria-disabled', 'true');
+      btn.style.pointerEvents = 'none';
+
+      try {
+        const res = await fetch('/api/payments/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ bookingId })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          const dest = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.replace(`/login.html?next=${dest}`);
+          return;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Payment initiation failed');
+        window.location.href = data.checkout_url;
+      } catch (err) {
+        alert('Error: ' + err.message);
+        retryInFlight = false;
+        btn.textContent = 'Retry Payment';
+        btn.removeAttribute('aria-disabled');
+        btn.style.pointerEvents = '';
+      }
     }
 
-    checkAuth();
-    lucide.createIcons();
+    if (bookingId) {
+      document.getElementById('retryBtn').href = `/booking-details.html?id=${encodeURIComponent(bookingId)}`;
+      document.getElementById('retryBtn').addEventListener('click', retryPayment);
+    } else {
+      document.getElementById('retryBtn').href = '/my-bookings.html';
+      document.getElementById('retryBtn').textContent = 'View My Bookings';
+    }
+
+    (async () => {
+      const authed = await checkAuth();
+      if (!authed) {
+        const dest = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.replace(`/login.html?next=${dest}`);
+        return;
+      }
+      window.lucide?.createIcons();
+    })();
   </script>
 </body>
 </html>

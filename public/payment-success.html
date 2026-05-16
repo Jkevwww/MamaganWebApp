@@ -64,7 +64,9 @@
 
       <div class="is-hidden" id="pendingState">
         <div class="result-card">
-          <lottie-player class="lottie-pending" src="https://assets2.lottiefiles.com/packages/lf20_m6cuL6.json" background="transparent" speed="1" loop autoplay></lottie-player>
+          <div class="result-icon-circle result-icon-circle--warning">
+            <i class="icon-result" data-lucide="clock"></i>
+          </div>
           <h2 class="pending-title">Waiting for Confirmation...</h2>
           <p class="text-muted pending-copy">We're waiting for PayMongo to confirm your payment. This usually takes a few seconds.</p>
         </div>
@@ -73,25 +75,30 @@
     </div>
   </main>
 
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <script>
-    const bookingId = new URLSearchParams(window.location.search).get('booking_id');
-    const isMock = new URLSearchParams(window.location.search).get('mock') === 'true';
+    const params = new URLSearchParams(window.location.search);
+    const bookingId = params.get('booking_id') || params.get('bookingId') || params.get('id');
+    const isMock = params.get('mock') === 'true';
     let pollCount = 0;
 
     async function checkAuth() {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
-        if (res.ok) {
-          const user = await res.json();
-          const navUser = document.getElementById('navUser');
-          if (navUser) navUser.textContent = user.name || '';
-          document.querySelectorAll('.auth-only').forEach(el => { el.classList.remove('is-hidden'); el.style.display = ''; });
-          document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
-          const lo = document.getElementById('navLogout');
-          if (lo) lo.style.display = 'inline-block';
+        if (!res.ok) {
+          return false;
         }
-      } catch (_) {}
+
+        const user = await res.json();
+        const navUser = document.getElementById('navUser');
+        if (navUser) navUser.textContent = user.name || '';
+        document.querySelectorAll('.auth-only').forEach(el => { el.classList.remove('is-hidden'); el.style.display = ''; });
+        document.querySelectorAll('.guest-only').forEach(el => { el.style.display = 'none'; });
+        const lo = document.getElementById('navLogout');
+        if (lo) lo.style.display = 'inline-block';
+        return true;
+      } catch (_) {
+        return false;
+      }
     }
 
     document.getElementById('navLogout')?.addEventListener('click', async (e) => {
@@ -103,30 +110,65 @@
       window.location.replace('/');
     });
 
+    function ticketUrlFromBooking(b) {
+      const start = b.start_time ? String(b.start_time).substring(0, 5) : '';
+      const end = b.end_time ? String(b.end_time).substring(0, 5) : '';
+      return `/view-ticket.html?id=${encodeURIComponent(b.id || bookingId)}&facility=${encodeURIComponent(b.facility_name || '')}&date=${encodeURIComponent(b.date ? new Date(b.date).toLocaleDateString() : '')}&time=${encodeURIComponent(start && end ? `${start} - ${end}` : '')}`;
+    }
+
+    function escHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setVisible(id, visible) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('is-hidden', !visible);
+      el.style.display = visible ? 'block' : 'none';
+    }
+
+    async function loadBookingDetails() {
+      const res = await fetch(`/api/facilities/bookings/${encodeURIComponent(bookingId)}`, { credentials: 'same-origin' });
+      if (!res.ok) return null;
+      return res.json();
+    }
+
     async function checkStatus() {
       if (!bookingId) {
-        window.location.replace('/');
+        showError('Missing booking reference', 'We could not identify the booking returned by the payment provider.');
         return;
       }
 
       if (isMock) {
-        document.getElementById('mockBanner').style.display = 'block';
-        document.getElementById('loadingState').style.display = 'none';
-        document.getElementById('successState').style.display = 'block';
-        document.getElementById('viewTicketBtn').href = `/booking-details.html?id=${encodeURIComponent(bookingId)}`;
-        lucide.createIcons();
+        showSuccess(await loadBookingDetails());
         return;
       }
 
       try {
         const res = await fetch(`/api/payments/status/${encodeURIComponent(bookingId)}`, { credentials: 'same-origin' });
+        if (res.status === 401 || res.status === 403) {
+          const dest = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.replace(`/login.html?next=${dest}`);
+          return;
+        }
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.message || 'Unable to verify payment status');
+        }
+
         const data = await res.json();
 
         if (data.payment_status === 'paid') {
-          showSuccess();
+          showSuccess(await loadBookingDetails());
         } else {
-          document.getElementById('loadingState').style.display = 'none';
-          document.getElementById('pendingState').style.display = 'block';
+          setVisible('loadingState', false);
+          setVisible('pendingState', true);
+          window.lucide?.createIcons();
 
           if (pollCount < 10) {
             pollCount++;
@@ -137,15 +179,27 @@
         }
       } catch (err) {
         console.error('Error checking status:', err);
+        showError('Unable to verify payment', err.message || 'Please check your booking status from My Bookings.');
       }
     }
 
-    function showSuccess() {
-      document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('pendingState').style.display = 'none';
-      document.getElementById('successState').style.display = 'block';
-      document.getElementById('viewTicketBtn').href = `/booking-details.html?id=${encodeURIComponent(bookingId)}`;
-      lucide.createIcons();
+    function showSuccess(booking) {
+      setVisible('loadingState', false);
+      setVisible('pendingState', false);
+      setVisible('successState', true);
+      setVisible('mockBanner', isMock);
+      const hasGeneratedTicket = booking && (!isMock || booking.payment_status === 'paid');
+      const viewTicketBtn = document.getElementById('viewTicketBtn');
+      viewTicketBtn.href = hasGeneratedTicket
+        ? ticketUrlFromBooking(booking)
+        : `/booking-details.html?id=${encodeURIComponent(bookingId)}`;
+      viewTicketBtn.textContent = hasGeneratedTicket ? 'View Full Ticket' : 'View Booking Details';
+
+      const ticketLabel = document.querySelector('.ticket-preview-label');
+      if (ticketLabel) {
+        ticketLabel.textContent = hasGeneratedTicket ? 'Digital Ticket Generated' : 'Booking Ready for Mock Confirmation';
+      }
+      window.lucide?.createIcons();
     }
 
     function showTimeout() {
@@ -156,6 +210,26 @@
           <a href="/my-bookings.html" class="btn btn-primary btn-block">Back to My Bookings</a>
         </div>
       `;
+    }
+
+    function showError(title, message) {
+      document.getElementById('loadingState').innerHTML = `
+        <div class="result-card">
+          <div class="result-icon-circle result-icon-circle--danger">
+            <i class="icon-result" data-lucide="alert-circle"></i>
+          </div>
+          <h2 class="result-title-danger">${escHtml(title)}</h2>
+          <p class="text-muted result-copy">${escHtml(message)}</p>
+          <div class="stacked-actions">
+            <a href="/my-bookings.html" class="btn btn-primary btn-block">Go to My Bookings</a>
+            <a href="/facilities.html" class="btn btn-secondary btn-block">Browse Facilities</a>
+          </div>
+        </div>
+      `;
+      setVisible('loadingState', true);
+      setVisible('pendingState', false);
+      setVisible('successState', false);
+      window.lucide?.createIcons();
     }
 
     document.getElementById('simulateWebhookBtn')?.addEventListener('click', async () => {
@@ -185,9 +259,16 @@
       }
     });
 
-    checkAuth();
-    checkStatus();
-    lucide.createIcons();
+    (async () => {
+      const authed = await checkAuth();
+      if (!authed) {
+        const dest = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.replace(`/login.html?next=${dest}`);
+        return;
+      }
+      await checkStatus();
+      window.lucide?.createIcons();
+    })();
   </script>
 </body>
 </html>
