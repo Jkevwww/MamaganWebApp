@@ -1,12 +1,14 @@
 (function () {
   const API_BASE = '/api/admin/facilities';
   const DEFAULT_IMAGE = '/assets/images/cottage.jpg';
+  const DELETE_LOTTIE_URL = 'https://lottie.host/embed/218949da-56b9-495b-ad6c-6f19de6d32e4/Av64mblLSy.lottie';
+  const CONFIRM_LOTTIE_URL = 'https://lottie.host/embed/b2fee4e8-7844-428a-adcc-3c8f7f698ef7/PxVN7fb25I.lottie';
 
   const state = {
     facilities: [],
     loading: false,
     editingId: null,
-    deleteConfirmResolver: null,
+    actionConfirmResolver: null,
   };
 
   const els = {};
@@ -17,7 +19,9 @@
     [
       'facilityAlert', 'facilitySearch', 'categoryFilter', 'sizeFilter', 'activeFilter', 'bookableFilter',
       'adminFilterToggle', 'adminFiltersPanel', 'applyAdminFilters', 'resetAdminFilters',
-      'deleteConfirmModal', 'deleteSuccessModal', 'cancelDeleteBtn', 'confirmDeleteBtn', 'deleteSuccessOkBtn',
+      'deleteConfirmModal', 'deleteConfirmLottie', 'deleteConfirmTitle', 'deleteConfirmMessage',
+      'deleteSuccessModal', 'deleteSuccessLottie', 'deleteSuccessTitle', 'deleteSuccessMessage',
+      'cancelDeleteBtn', 'confirmDeleteBtn', 'deleteSuccessOkBtn',
       'facilitiesTbody', 'facilityModal', 'facilityForm', 'facilityId', 'modalTitle', 'modalSubtitle',
       'addFacilityBtn', 'closeModal', 'cancelBtn', 'saveBtn', 'uploadImageBtn', 'clearImageBtn',
       'name', 'category', 'size', 'description', 'image_url', 'image_file', 'imagePreview',
@@ -399,8 +403,18 @@
   async function toggleFacility(facility) {
     const nextActive = Number(facility.active) ? 0 : 1;
     const nextBookable = nextActive ? 1 : 0;
-    const label = nextActive ? 'enable' : 'disable';
-    if (!confirm(`Are you sure you want to ${label} "${facility.name}"?`)) return;
+    const action = nextActive ? 'enable' : 'disable';
+    const confirmed = await confirmFacilityAction({
+      title: nextActive ? 'Enable facility?' : 'Disable facility?',
+      message: nextActive
+        ? `${facility.name} will be visible and available for bookings again.`
+        : `${facility.name} will be hidden from new bookings until it is enabled again.`,
+      animationUrl: nextActive ? CONFIRM_LOTTIE_URL : DELETE_LOTTIE_URL,
+      animationTitle: nextActive ? 'Confirm animation' : 'Delete animation',
+      confirmText: nextActive ? 'Enable' : 'Disable',
+      danger: !nextActive,
+    });
+    if (!confirmed) return;
 
     try {
       await apiFetch(`${API_BASE}/${facility.id}/status`, {
@@ -412,29 +426,50 @@
           unavailable_reason: nextActive ? facility.unavailable_reason : (facility.unavailable_reason || 'Currently unavailable'),
         }),
       });
-      showAlert(`Facility ${nextActive ? 'enabled' : 'disabled'} successfully.`, 'success');
       await loadFacilities();
+      openActionSuccess({
+        title: nextActive ? 'Enabled' : 'Disabled',
+        message: `${facility.name} has been ${action}d successfully.`,
+      });
     } catch (err) {
       showAlert(err.message, 'error');
     }
   }
 
   async function deleteFacility(facility) {
-    const confirmed = await confirmDeleteFacility();
+    const confirmed = await confirmFacilityAction({
+      title: 'Delete facility?',
+      message: `${facility.name} will be permanently deleted.`,
+      animationUrl: DELETE_LOTTIE_URL,
+      animationTitle: 'Delete animation',
+      confirmText: 'Delete',
+      danger: true,
+    });
     if (!confirmed) return;
 
     try {
       await apiFetch(`${API_BASE}/${facility.id}`, { method: 'DELETE' });
       await loadFacilities();
-      openDeleteSuccess();
+      openActionSuccess({
+        title: 'Deleted',
+        message: `${facility.name} has been deleted.`,
+      });
     } catch (err) {
       showAlert(err.message, 'error');
     }
   }
 
-  function confirmDeleteFacility() {
+  function confirmFacilityAction({ title, message, animationUrl, animationTitle, confirmText, danger }) {
     return new Promise((resolve) => {
-      state.deleteConfirmResolver = resolve;
+      state.actionConfirmResolver = resolve;
+      els.deleteConfirmTitle.textContent = title;
+      els.deleteConfirmMessage.textContent = message;
+      els.deleteConfirmLottie.src = animationUrl;
+      els.deleteConfirmLottie.title = animationTitle;
+      els.confirmDeleteBtn.textContent = confirmText;
+      els.confirmDeleteBtn.className = danger
+        ? 'btn btn-primary delete-confirm-button'
+        : 'btn btn-primary';
       els.deleteConfirmModal.classList.add('open');
       els.confirmDeleteBtn.disabled = false;
     });
@@ -442,13 +477,17 @@
 
   function closeDeleteConfirm(result = false) {
     els.deleteConfirmModal.classList.remove('open');
-    if (state.deleteConfirmResolver) {
-      state.deleteConfirmResolver(result);
-      state.deleteConfirmResolver = null;
+    if (state.actionConfirmResolver) {
+      state.actionConfirmResolver(result);
+      state.actionConfirmResolver = null;
     }
   }
 
-  function openDeleteSuccess() {
+  function openActionSuccess({ title, message }) {
+    els.deleteSuccessTitle.textContent = title;
+    els.deleteSuccessMessage.textContent = message;
+    els.deleteSuccessLottie.src = CONFIRM_LOTTIE_URL;
+    els.deleteSuccessLottie.title = 'Confirm animation';
     els.deleteSuccessModal.classList.add('open');
   }
 
