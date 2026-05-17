@@ -1,208 +1,24 @@
-const net = require('net');
-const tls = require('tls');
+const nodemailer = require('nodemailer');
 const { AppError } = require('../middleware/error');
 
 function emailFrom() {
-  return process.env.EMAIL_FROM || process.env.MAIL_FROM || 'Mamagan Resort <no-reply@mamagan.local>';
-}
-
-function parseEmailAddress(value) {
-  const raw = String(value || '').trim();
-  const match = raw.match(/<([^>]+)>/);
-  return (match ? match[1] : raw).trim();
+  return process.env.EMAIL_FROM
+    || process.env.SMTP_FROM
+    || process.env.MAIL_FROM
+    || (process.env.SMTP_USER ? `Mamagan Resort <${process.env.SMTP_USER}>` : 'Mamagan Resort <no-reply@mamagan.local>');
 }
 
 function smtpConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
+function cleanSmtpPass() {
+  return String(process.env.SMTP_PASS || '').replace(/\s+/g, '');
+}
+
 function smtpSecure() {
   if (String(process.env.SMTP_SECURE || '').toLowerCase() === 'true') return true;
   return Number(process.env.SMTP_PORT || 587) === 465;
-}
-
-function encodeHeader(value) {
-  const text = String(value || '');
-  return /^[\x00-\x7F]*$/.test(text) ? text : `=?UTF-8?B?${Buffer.from(text, 'utf8').toString('base64')}?=`;
-}
-
-function buildMimeMessage({ from, to, subject, text, html }) {
-  const boundary = `mamagan-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-  return [
-    `From: ${from}`,
-    `To: ${to}`,
-    `Subject: ${encodeHeader(subject)}`,
-    'MIME-Version: 1.0',
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    '',
-    `--${boundary}`,
-    'Content-Type: text/plain; charset=UTF-8',
-    'Content-Transfer-Encoding: 8bit',
-    '',
-    text,
-    '',
-    `--${boundary}`,
-    'Content-Type: text/html; charset=UTF-8',
-    'Content-Transfer-Encoding: 8bit',
-    '',
-    html,
-    '',
-    `--${boundary}--`,
-    '',
-  ].join('\r\n');
-}
-
-function createSmtpClient({ host, port, secure }) {
-  const socket = secure
-    ? tls.connect({ host, port, servername: host })
-    : net.connect({ host, port });
-
-  socket.setEncoding('utf8');
-  socket.setTimeout(Number(process.env.SMTP_TIMEOUT_MS || 20000));
-
-  let buffer = '';
-  const pending = [];
-
-  function flush() {
-    while (pending.length > 0) {
-      const complete = buffer.match(/(?:^|\r?\n)(\d{3}) [^\r\n]*(?:\r?\n|$)/);
-      if (!complete) return;
-      const endIndex = complete.index + complete[0].length;
-      const response = buffer.slice(0, endIndex).trim();
-      buffer = buffer.slice(endIndex);
-      pending.shift()(response);
-    }
-  }
-
-  socket.on('data', (chunk) => {
-    buffer += chunk;
-    flush();
-  });
-
-  socket.on('timeout', () => {
-    socket.destroy(new Error('SMTP connection timed out'));
-  });
-
-  socket.on('error', (err) => {
-    while (pending.length > 0) pending.shift()(err);
-  });
-
-  function readResponse() {
-    return new Promise((resolve, reject) => {
-      pending.push((result) => {
-        if (result instanceof Error) reject(result);
-        else resolve(result);
-      });
-      flush();
-    });
-  }
-
-  async function expect(command, validCodes) {
-    if (command) socket.write(`${command}\r\n`);
-    const response = await readResponse();
-    const code = Number(String(response).slice(0, 3));
-    if (!validCodes.includes(code)) {
-      throw new Error(`SMTP command failed: ${response}`);
-    }
-    return response;
-  }
-
-  return { socket, expect };
-}
-
-async function sendWithSmtp({ to, subject, text, html }) {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const secure = smtpSecure();
-  const username = process.env.SMTP_USER;
-  const password = process.env.SMTP_PASS;
-  const fromHeader = process.env.SMTP_FROM
-    || process.env.EMAIL_FROM
-    || process.env.MAIL_FROM
-    || `Mamagan Resort <${username}>`;
-  const fromAddress = parseEmailAddress(fromHeader);
-  const message = buildMimeMessage({ from: fromHeader, to, subject, text, html });
-  let client = createSmtpClient({ host, port, secure });
-
-  await client.expect(null, [220]);
-  await client.expect(`EHLO ${process.env.SMTP_HELO_NAME || 'mamagan.local'}`, [250]);
-
-  if (!secure && String(process.env.SMTP_STARTTLS || 'true').toLowerCase() !== 'false') {
-    await client.expect('STARTTLS', [220]);
-    client.socket.removeAllListeners('data');
-    client.socket.removeAllListeners('error');
-    client.socket.removeAllListeners('timeout');
-    const tlsSocket = tls.connect({ socket: client.socket, servername: host });
-    await new Promise((resolve, reject) => {
-      tlsSocket.once('secureConnect', resolve);
-      tlsSocket.once('error', reject);
-    });
-    client = createSmtpClientFromSocket(tlsSocket);
-    await client.expect(`EHLO ${process.env.SMTP_HELO_NAME || 'mamagan.local'}`, [250]);
-  }
-
-  await client.expect(
-    `AUTH PLAIN ${Buffer.from(`\0${username}\0${password}`, 'utf8').toString('base64')}`,
-    [235]
-  );
-  await client.expect(`MAIL FROM:<${fromAddress}>`, [250]);
-  await client.expect(`RCPT TO:<${to}>`, [250, 251]);
-  await client.expect('DATA', [354]);
-  client.socket.write(`${message.replace(/\r?\n\./g, '\r\n..')}\r\n.\r\n`);
-  await client.expect(null, [250]);
-  await client.expect('QUIT', [221]);
-  client.socket.end();
-}
-
-function createSmtpClientFromSocket(socket) {
-  socket.setEncoding('utf8');
-  socket.setTimeout(Number(process.env.SMTP_TIMEOUT_MS || 20000));
-
-  let buffer = '';
-  const pending = [];
-
-  function flush() {
-    while (pending.length > 0) {
-      const complete = buffer.match(/(?:^|\r?\n)(\d{3}) [^\r\n]*(?:\r?\n|$)/);
-      if (!complete) return;
-      const endIndex = complete.index + complete[0].length;
-      const response = buffer.slice(0, endIndex).trim();
-      buffer = buffer.slice(endIndex);
-      pending.shift()(response);
-    }
-  }
-
-  socket.on('data', (chunk) => {
-    buffer += chunk;
-    flush();
-  });
-  socket.on('timeout', () => socket.destroy(new Error('SMTP connection timed out')));
-  socket.on('error', (err) => {
-    while (pending.length > 0) pending.shift()(err);
-  });
-
-  function readResponse() {
-    return new Promise((resolve, reject) => {
-      pending.push((result) => {
-        if (result instanceof Error) reject(result);
-        else resolve(result);
-      });
-      flush();
-    });
-  }
-
-  async function expect(command, validCodes) {
-    if (command) socket.write(`${command}\r\n`);
-    const response = await readResponse();
-    const code = Number(String(response).slice(0, 3));
-    if (!validCodes.includes(code)) {
-      throw new Error(`SMTP command failed: ${response}`);
-    }
-    return response;
-  }
-
-  return { socket, expect };
 }
 
 function verificationHtml(code) {
@@ -214,6 +30,27 @@ function verificationHtml(code) {
       <p>This code expires in 10 minutes. If you did not request this, you can ignore this email.</p>
     </div>
   `;
+}
+
+function deliveryError(err, provider) {
+  const message = String(err?.message || '');
+  const code = String(err?.code || err?.responseCode || '');
+
+  console.error(`[EMAIL] ${provider} delivery failed:`, message);
+
+  if (provider === 'SMTP') {
+    if (code === 'EAUTH' || message.includes('535') || message.toLowerCase().includes('auth')) {
+      return new AppError(
+        'Email login failed. Check SMTP_USER and SMTP_PASS. For Gmail, SMTP_PASS must be a 16-character Google App Password.',
+        502
+      );
+    }
+    if (code === 'ECONNECTION' || code === 'ETIMEDOUT' || message.toLowerCase().includes('timeout')) {
+      return new AppError('Email server connection failed. Check SMTP_HOST, SMTP_PORT, and SMTP_SECURE.', 502);
+    }
+  }
+
+  return new AppError(`Verification email could not be sent through ${provider}. Check the email provider settings.`, 502);
 }
 
 async function sendWithResend({ to, subject, text, html }) {
@@ -262,24 +99,56 @@ async function sendWithBrevo({ to, subject, text, html }) {
   }
 }
 
+async function sendWithSmtp({ to, subject, text, html }) {
+  const transporter = nodemailer.createTransport({
+    host: String(process.env.SMTP_HOST || '').trim(),
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: smtpSecure(),
+    auth: {
+      user: String(process.env.SMTP_USER || '').trim(),
+      pass: cleanSmtpPass(),
+    },
+  });
+
+  await transporter.sendMail({
+    from: emailFrom(),
+    to,
+    subject,
+    text,
+    html,
+  });
+}
+
 async function sendVerificationCode(to, code) {
   const subject = 'Your Mamagan Resort verification code';
   const text = `Your Mamagan Resort verification code is ${code}. This code expires in 10 minutes.`;
   const html = verificationHtml(code);
 
   if (process.env.RESEND_API_KEY) {
-    await sendWithResend({ to, subject, text, html });
-    return { delivered: true, provider: 'resend' };
+    try {
+      await sendWithResend({ to, subject, text, html });
+      return { delivered: true, provider: 'resend' };
+    } catch (err) {
+      throw deliveryError(err, 'Resend');
+    }
   }
 
   if (process.env.BREVO_API_KEY) {
-    await sendWithBrevo({ to, subject, text, html });
-    return { delivered: true, provider: 'brevo' };
+    try {
+      await sendWithBrevo({ to, subject, text, html });
+      return { delivered: true, provider: 'brevo' };
+    } catch (err) {
+      throw deliveryError(err, 'Brevo');
+    }
   }
 
   if (smtpConfigured()) {
-    await sendWithSmtp({ to, subject, text, html });
-    return { delivered: true, provider: 'smtp' };
+    try {
+      await sendWithSmtp({ to, subject, text, html });
+      return { delivered: true, provider: 'smtp' };
+    } catch (err) {
+      throw deliveryError(err, 'SMTP');
+    }
   }
 
   if (process.env.NODE_ENV === 'production') {
