@@ -17,6 +17,26 @@ function setLoading(btnId, isLoading) {
   btn.textContent = isLoading ? 'Please wait...' : btn.dataset.originalText || btn.textContent;
 }
 
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('The request timed out while sending the verification email. Please try again or check the email settings.');
+    }
+    throw err;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 const ADMIN_TIERS = new Set(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'VIEWER']);
 
 function normalizeRole(value) {
@@ -169,13 +189,12 @@ function initLoginForm(formId, alertId, btnId) {
 
       setLoading('loginVerifyBtn', true);
       try {
-        const res = await fetch('/api/auth/register/verify', {
+        const { res, data } = await fetchJsonWithTimeout('/api/auth/register/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
           body: JSON.stringify({ email: pendingVerificationEmail, code }),
         });
-        const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Email verification failed');
 
         rememberUser(data.user);
@@ -201,13 +220,12 @@ function initLoginForm(formId, alertId, btnId) {
 
     setLoading(btnId, true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const { res, data } = await fetchJsonWithTimeout('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Login failed');
 
       if (data.requires_verification) {
@@ -267,13 +285,12 @@ function initRegisterForm(formId, alertId, btnId) {
 
       setLoading('verifyBtn', true);
       try {
-        const res = await fetch('/api/auth/register/verify', {
+        const { res, data } = await fetchJsonWithTimeout('/api/auth/register/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
           body: JSON.stringify({ email: pendingVerificationEmail, code }),
         });
-        const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Email verification failed');
 
         rememberUser(data.user);
@@ -313,13 +330,12 @@ function initRegisterForm(formId, alertId, btnId) {
 
     setLoading(btnId, true);
     try {
-      const res = await fetch('/api/auth/register', {
+      const { res, data } = await fetchJsonWithTimeout('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({ name, email, phone, password }),
       });
-      const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
 
       pendingVerificationEmail = data.email || email;

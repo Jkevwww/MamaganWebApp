@@ -16,6 +16,11 @@ function cleanSmtpPass() {
   return String(process.env.SMTP_PASS || '').replace(/\s+/g, '');
 }
 
+function smtpTimeoutMs() {
+  const parsed = Number.parseInt(process.env.SMTP_TIMEOUT_MS || '12000', 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 12000;
+}
+
 function smtpSecure() {
   if (String(process.env.SMTP_SECURE || '').toLowerCase() === 'true') return true;
   return Number(process.env.SMTP_PORT || 587) === 465;
@@ -34,23 +39,55 @@ function verificationHtml(code) {
 
 function deliveryError(err, provider) {
   const message = String(err?.message || '');
+  const response = String(err?.response || '');
   const code = String(err?.code || err?.responseCode || '');
+  const detail = `${code} ${message} ${response}`.toLowerCase();
 
-  console.error(`[EMAIL] ${provider} delivery failed:`, message);
+  console.error(`[EMAIL] ${provider} delivery failed:`, {
+    code: err?.code,
+    responseCode: err?.responseCode,
+    command: err?.command,
+    message,
+    response,
+  });
 
   if (provider === 'SMTP') {
-    if (code === 'EAUTH' || message.includes('535') || message.toLowerCase().includes('auth')) {
+    if (
+      code === 'EAUTH'
+      || detail.includes('534')
+      || detail.includes('535')
+      || detail.includes('5.7.8')
+      || detail.includes('5.7.9')
+      || detail.includes('application-specific password')
+      || detail.includes('username and password not accepted')
+      || detail.includes('auth')
+    ) {
       return new AppError(
         'Email login failed. Check SMTP_USER and SMTP_PASS. For Gmail, SMTP_PASS must be a 16-character Google App Password.',
         502
       );
     }
-    if (code === 'ECONNECTION' || code === 'ETIMEDOUT' || message.toLowerCase().includes('timeout')) {
+    if (
+      code === 'ECONNECTION'
+      || code === 'ETIMEDOUT'
+      || detail.includes('timeout')
+      || detail.includes('greeting never received')
+      || detail.includes('connection')
+    ) {
       return new AppError('Email server connection failed. Check SMTP_HOST, SMTP_PORT, and SMTP_SECURE.', 502);
+    }
+    if (detail.includes('sender') || detail.includes('from') || detail.includes('not owned')) {
+      return new AppError('Email sender was rejected. EMAIL_FROM must use the same Gmail address as SMTP_USER.', 502);
+    }
+    if (detail.includes('recipient') || detail.includes('rcpt') || detail.includes('mailbox')) {
+      return new AppError('The client email address was rejected by the email provider. Check that the email address is valid.', 502);
     }
   }
 
-  return new AppError(`Verification email could not be sent through ${provider}. Check the email provider settings.`, 502);
+  return new AppError(
+    `Verification email could not be sent through ${provider}. Check the email provider settings. SMTP detail: ${code || 'unknown'}.`,
+    502
+  );
 }
 
 async function sendWithResend({ to, subject, text, html }) {
@@ -108,6 +145,9 @@ async function sendWithSmtp({ to, subject, text, html }) {
       user: String(process.env.SMTP_USER || '').trim(),
       pass: cleanSmtpPass(),
     },
+    connectionTimeout: smtpTimeoutMs(),
+    greetingTimeout: smtpTimeoutMs(),
+    socketTimeout: smtpTimeoutMs(),
   });
 
   await transporter.sendMail({
