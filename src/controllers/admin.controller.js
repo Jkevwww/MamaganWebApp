@@ -135,6 +135,30 @@ async function updateUserAccess(req, res, next) {
   }
 }
 
+async function deleteUser(req, res, next) {
+  try {
+    const result = await adminService.deleteUser(req.params.id, req.user?.id || null);
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: 'USER_DELETED',
+      module: 'USERS',
+      targetType: 'USER',
+      targetId: result.id,
+      details: {
+        email: result.email,
+        access_tier: result.access_tier,
+        booking_count: result.booking_count,
+      },
+      ipAddress,
+      userAgent,
+    });
+    res.status(200).json({ ...result, message: 'User account deleted' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function listSystemLogs(req, res, next) {
   try {
     const data = await adminService.listSystemLogs(req.query);
@@ -478,6 +502,7 @@ module.exports = {
   listUsers,
   createStaffUser,
   updateUserAccess,
+  deleteUser,
   listSystemLogs,
   getSettings,
   updateSettings,

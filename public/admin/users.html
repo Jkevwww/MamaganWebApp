@@ -162,6 +162,29 @@
     </div>
   </div>
 
+  <div class="modal-overlay delete-dialog-overlay" id="deleteUserModal" role="presentation" aria-hidden="true">
+    <div class="delete-dialog users-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteUserTitle">
+      <iframe class="delete-dialog-lottie" src="https://lottie.host/embed/218949da-56b9-495b-ad6c-6f19de6d32e4/Av64mblLSy.lottie" title="Delete animation"></iframe>
+      <h2 id="deleteUserTitle">Delete account?</h2>
+      <p id="deleteUserMessage">This account will be permanently deleted from the directory.</p>
+      <div class="delete-dialog-actions">
+        <button type="button" class="btn btn-secondary" id="cancelDeleteUserBtn">Cancel</button>
+        <button type="button" class="btn btn-primary delete-confirm-button" id="confirmDeleteUserBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay delete-dialog-overlay" id="deleteUserSuccessModal" role="presentation" aria-hidden="true">
+    <div class="delete-dialog users-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteUserSuccessTitle">
+      <iframe class="delete-dialog-lottie" src="https://lottie.host/embed/b2fee4e8-7844-428a-adcc-3c8f7f698ef7/PxVN7fb25I.lottie" title="Confirm animation"></iframe>
+      <h2 id="deleteUserSuccessTitle">Deleted</h2>
+      <p id="deleteUserSuccessMessage">The account has been removed.</p>
+      <div class="delete-dialog-actions delete-dialog-actions-center">
+        <button type="button" class="btn btn-primary" id="deleteUserSuccessOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/assets/js/admin-layout.js"></script>
   <script src="/admin/js/users.js"></script>
 </body>

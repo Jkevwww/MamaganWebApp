@@ -824,6 +824,65 @@ async function updateUserAccess(id, input = {}, actorUserId = null) {
   return { id: userId, access_tier: accessTier, active: Boolean(active) };
 }
 
+async function deleteUser(id, actorUserId = null) {
+  const userId = Number.parseInt(id, 10);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new AppError('Invalid user id', 400);
+  }
+  if (userId === Number(actorUserId)) {
+    throw new AppError('You cannot delete your own account', 400);
+  }
+
+  const [existingRows] = await pool.query(
+    `SELECT
+       u.id,
+       u.name,
+       u.email,
+       COALESCE(u.access_tier, u.role, 'GUEST') AS access_tier,
+       COALESCE(u.active, 1) AS active,
+       COUNT(DISTINCT b.id) AS booking_count
+     FROM users u
+     LEFT JOIN bookings b ON b.user_id = u.id
+     WHERE u.id = ?
+     GROUP BY u.id, u.name, u.email, u.access_tier, u.role, u.active`,
+    [userId]
+  );
+  if (!existingRows.length) throw new AppError('User not found', 404);
+
+  const user = existingRows[0];
+  if (user.access_tier === 'SUPER_ADMIN' && Number(user.active || 0) === 1) {
+    const [[superAdminCount]] = await pool.query(
+      "SELECT COUNT(*) AS count FROM users WHERE COALESCE(access_tier, role) = 'SUPER_ADMIN' AND COALESCE(active, 1) = 1"
+    );
+    if (Number(superAdminCount.count || 0) <= 1) {
+      throw new AppError('At least one active SUPER_ADMIN account is required', 400);
+    }
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query('UPDATE app_settings SET updated_by = NULL WHERE updated_by = ?', [userId]);
+    await conn.query('UPDATE system_logs SET user_id = NULL WHERE user_id = ?', [userId]);
+    const [result] = await conn.query('DELETE FROM users WHERE id = ?', [userId]);
+    await conn.commit();
+
+    if (result.affectedRows === 0) throw new AppError('User not found', 404);
+    return {
+      id: userId,
+      name: user.name,
+      email: user.email,
+      access_tier: user.access_tier,
+      booking_count: Number(user.booking_count || 0),
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 async function listSystemLogs(filtersInput = {}) {
   const filters = normalizeSystemLogFilters(filtersInput);
   const { sql, params } = buildSystemLogWhere(filters);
@@ -1561,6 +1620,7 @@ module.exports = {
   listUsers,
   createStaffUser,
   updateUserAccess,
+  deleteUser,
   listSystemLogs,
   getAllFacilitiesAdmin,
   getFacilityByIdAdmin,

@@ -5,6 +5,7 @@
   const token = localStorage.getItem('token');
   const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
   let currentUsers = [];
+  let pendingDeleteUser = null;
 
   function esc(value) {
     return String(value ?? '')
@@ -169,6 +170,9 @@
             <button type="button" class="btn-sm ${user.active ? 'btn-cancel' : 'btn-approve'} user-status-btn" data-user-id="${esc(user.id)}" data-active="${user.active ? '0' : '1'}">
               ${user.active ? 'Deactivate' : 'Activate'}
             </button>
+            <button type="button" class="btn-sm btn-cancel user-delete-btn" data-user-id="${esc(user.id)}" data-user-name="${esc(user.name || user.email)}" data-user-email="${esc(user.email)}" data-booking-count="${Number(user.booking_count || 0)}">
+              Delete
+            </button>
           </div>
         </td>
       </tr>
@@ -194,6 +198,58 @@
     });
     showAlert('User account updated.', 'success');
     await loadUsers();
+  }
+
+  function openOverlay(id) {
+    const modal = document.getElementById(id);
+    modal?.classList.add('open');
+    modal?.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeOverlay(id) {
+    const modal = document.getElementById(id);
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+  }
+
+  function openDeleteUserModal(user) {
+    hideAlert();
+    pendingDeleteUser = user;
+    const label = user.name || user.email || `User #${user.id}`;
+    const bookingNote = Number(user.bookingCount || 0) > 0
+      ? ` This will also remove ${Number(user.bookingCount).toLocaleString()} linked booking record${Number(user.bookingCount) === 1 ? '' : 's'} where database cascade rules apply.`
+      : '';
+    const message = document.getElementById('deleteUserMessage');
+    if (message) {
+      message.textContent = `Delete ${label}? This account will be permanently removed from the Account Directory.${bookingNote}`;
+    }
+    openOverlay('deleteUserModal');
+    document.getElementById('cancelDeleteUserBtn')?.focus();
+  }
+
+  function closeDeleteUserModal() {
+    closeOverlay('deleteUserModal');
+    pendingDeleteUser = null;
+    setButtonLoading('confirmDeleteUserBtn', false);
+  }
+
+  async function confirmDeleteUser() {
+    if (!pendingDeleteUser?.id) return;
+    setButtonLoading('confirmDeleteUserBtn', true);
+    try {
+      const result = await api(`/api/admin/users/${encodeURIComponent(pendingDeleteUser.id)}`, {
+        method: 'DELETE',
+      });
+      const deletedLabel = result.name || pendingDeleteUser.name || result.email || pendingDeleteUser.email || 'The account';
+      closeDeleteUserModal();
+      const successMessage = document.getElementById('deleteUserSuccessMessage');
+      if (successMessage) successMessage.textContent = `${deletedLabel} has been removed from the directory.`;
+      openOverlay('deleteUserSuccessModal');
+      await loadUsers();
+    } catch (err) {
+      closeDeleteUserModal();
+      showAlert(err.message);
+    }
   }
 
   function openStaffModal() {
@@ -261,6 +317,15 @@
     if (event.target?.id === 'staffModal') closeStaffModal();
   });
   document.getElementById('staffForm')?.addEventListener('submit', submitStaffForm);
+  document.getElementById('cancelDeleteUserBtn')?.addEventListener('click', closeDeleteUserModal);
+  document.getElementById('confirmDeleteUserBtn')?.addEventListener('click', confirmDeleteUser);
+  document.getElementById('deleteUserModal')?.addEventListener('click', (event) => {
+    if (event.target?.id === 'deleteUserModal') closeDeleteUserModal();
+  });
+  document.getElementById('deleteUserSuccessOkBtn')?.addEventListener('click', () => closeOverlay('deleteUserSuccessModal'));
+  document.getElementById('deleteUserSuccessModal')?.addEventListener('click', (event) => {
+    if (event.target?.id === 'deleteUserSuccessModal') closeOverlay('deleteUserSuccessModal');
+  });
 
   document.getElementById('usersTbody')?.addEventListener('change', (event) => {
     const select = event.target.closest('.user-access-select');
@@ -272,9 +337,21 @@
   });
 
   document.getElementById('usersTbody')?.addEventListener('click', (event) => {
+    const deleteButton = event.target.closest('.user-delete-btn');
+    if (deleteButton) {
+      openDeleteUserModal({
+        id: deleteButton.dataset.userId,
+        name: deleteButton.dataset.userName,
+        email: deleteButton.dataset.userEmail,
+        bookingCount: deleteButton.dataset.bookingCount,
+      });
+      return;
+    }
+
     const button = event.target.closest('.user-status-btn');
-    if (!button) return;
-    updateUserAccess(button.dataset.userId, { active: button.dataset.active }).catch((err) => showAlert(err.message));
+    if (button) {
+      updateUserAccess(button.dataset.userId, { active: button.dataset.active }).catch((err) => showAlert(err.message));
+    }
   });
 
   loadUsers().catch((err) => showAlert(err.message));

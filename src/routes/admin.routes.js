@@ -48,6 +48,7 @@ router.get('/reports', adminController.getReports);
 router.get('/users', adminController.listUsers);
 router.post('/users/staff', requirePermission(['SUPER_ADMIN', 'ADMIN']), adminController.createStaffUser);
 router.patch('/users/:id/access', requirePermission(['SUPER_ADMIN', 'ADMIN']), adminController.updateUserAccess);
+router.delete('/users/:id', requirePermission(['SUPER_ADMIN', 'ADMIN']), adminController.deleteUser);
 router.get('/logs', adminController.listSystemLogs);
 router.get('/settings', adminController.getSettings);
 router.put('/settings', requirePermission(['SUPER_ADMIN', 'ADMIN']), adminController.updateSettings);
