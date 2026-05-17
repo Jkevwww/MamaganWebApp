@@ -13,42 +13,125 @@
 <body class="admin-body">
 
   <header class="page-header">
-    <h1 class="page-title">System logs</h1>
-    <p class="page-subtitle">Audit trail for authentication and admin actions. Hook this view to the system_logs query when you add the listing API.</p>
+    <h1 class="page-title">System Logs</h1>
+    <p class="page-subtitle">Monitor admin logins, access changes, facility updates, check-ins, and security events.</p>
   </header>
 
-  <section class="table-card admin-reveal" aria-label="System log preview">
-    <div class="table-toolbar">
-      <label for="logActionFilter" class="form-label">Action</label>
-      <select id="logActionFilter" class="form-select">
-        <option value="">All actions</option>
-        <option value="LOGIN_REDIRECT_ADMIN">Login redirects</option>
-        <option value="UNAUTHORIZED_ADMIN_ACCESS">Unauthorized access</option>
-        <option value="ADMIN_ACCOUNT_UPDATED">Admin changes</option>
-      </select>
-      <button type="button" class="btn btn-outline btn-sm">Export logs</button>
+  <div id="logsAlert" class="dashboard-alert is-hidden" role="status" aria-live="polite"></div>
+
+  <section class="dashboard-stats-grid" aria-label="Log summary">
+    <article class="stat-card">
+      <span class="stat-label">Filtered logs</span>
+      <strong class="stat-value" id="totalLogs">0</strong>
+      <span class="stat-sub" id="todayLogs">0 today</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Admin actions</span>
+      <strong class="stat-value stat-value-accent" id="adminLogs">0</strong>
+      <span class="stat-sub">Staff, viewer, admin, and super admin</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Authentication</span>
+      <strong class="stat-value" id="authLogs">0</strong>
+      <span class="stat-sub">Login and OAuth activity</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Security events</span>
+      <strong class="stat-value" id="securityLogs">0</strong>
+      <span class="stat-sub">Failures, errors, and unauthorized access</span>
+    </article>
+  </section>
+
+  <form id="logsFilters" class="toolbar logs-toolbar" aria-label="System log filters">
+    <div class="logs-filter-grid">
+      <div>
+        <label for="logSearch" class="form-label">Search</label>
+        <input type="search" id="logSearch" class="form-control" placeholder="Action, admin, IP, target, details">
+      </div>
+      <div>
+        <label for="logActorFilter" class="form-label">Actor</label>
+        <select id="logActorFilter" class="form-select">
+          <option value="ALL">All actors</option>
+          <option value="ADMIN">Admins / Staff</option>
+          <option value="CLIENT">Clients</option>
+          <option value="SYSTEM">System / anonymous</option>
+        </select>
+      </div>
+      <div>
+        <label for="logModuleFilter" class="form-label">Module</label>
+        <select id="logModuleFilter" class="form-select">
+          <option value="">All modules</option>
+        </select>
+      </div>
+      <div>
+        <label for="logActionFilter" class="form-label">Action</label>
+        <select id="logActionFilter" class="form-select">
+          <option value="">All actions</option>
+        </select>
+      </div>
+      <div>
+        <label for="logStartDate" class="form-label">Start date</label>
+        <input type="date" id="logStartDate" class="form-control">
+      </div>
+      <div>
+        <label for="logEndDate" class="form-label">End date</label>
+        <input type="date" id="logEndDate" class="form-control">
+      </div>
+    </div>
+    <div class="logs-actions">
+      <button type="submit" class="btn btn-primary"><i data-lucide="filter"></i> Apply</button>
+      <button type="button" class="btn btn-secondary" id="resetLogsBtn"><i data-lucide="rotate-ccw"></i> Reset</button>
+      <button type="button" class="btn btn-secondary" id="exportLogsBtn"><i data-lucide="download"></i> Export CSV</button>
+    </div>
+  </form>
+
+  <section class="table-card admin-reveal" aria-label="System logs">
+    <div class="logs-table-heading">
+      <div>
+        <h3>Audit Trail</h3>
+        <p class="text-muted small-muted">Newest activity is shown first. Use actor filter to focus on admin and staff actions.</p>
+      </div>
     </div>
     <div class="table-responsive">
-      <table class="data-table">
+      <table class="data-table" id="logsTable">
         <thead>
           <tr>
             <th>Date</th>
-            <th>User</th>
+            <th>Actor</th>
             <th>Action</th>
             <th>Module</th>
+            <th>Target</th>
             <th>IP address</th>
+            <th>Details</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td colspan="5" class="table-empty">Log records will appear here once loaded from the audit API.</td>
-          </tr>
-        </tbody>
+        <tbody id="logsTbody"></tbody>
       </table>
     </div>
   </section>
 
+  <div class="modal-overlay" id="logDetailsModal" aria-hidden="true">
+    <div class="modal-dialog logs-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="logDetailsTitle">
+      <div class="modal-header">
+        <div>
+          <h2 id="logDetailsTitle">Log details</h2>
+          <p class="modal-subtitle" id="logDetailsSubtitle"></p>
+        </div>
+        <button type="button" class="modal-close" id="closeLogDetailsBtn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <dl class="log-details-list" id="logDetailsList"></dl>
+        <pre class="log-details-pre" id="logDetailsRaw"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="dismissLogDetailsBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/assets/js/admin-layout.js"></script>
-  <script>lucide.createIcons();</script>
+  <script src="/admin/js/logs.js"></script>
 </body>
 </html>

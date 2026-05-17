@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const { AppError } = require('../middleware/error');
 const qrUtils = require('../utils/qr');
+const { hashPassword } = require('../utils/hash');
 const crypto = require('crypto');
 
 const FACILITY_COLUMNS = `
@@ -15,6 +16,33 @@ const FACILITY_COLUMNS = `
 const CATEGORIES = new Set(['COTTAGE', 'CABANA', 'BEACH_EQUIPMENT']);
 const SIZES = new Set(['SMALL', 'MEDIUM', 'LARGE', 'EXTRA_LARGE']);
 const RENTAL_TYPES = new Set(['FIXED', 'HOURLY', 'DAILY', 'HOURLY_OR_DAILY']);
+const USER_ACCESS_TIERS = new Set(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'VIEWER', 'GUEST']);
+
+const DEFAULT_APP_SETTINGS = {
+  resort_profile: {
+    resort_name: 'Mamagan Fun & Adventure Beach Resort',
+    support_email: 'fieljeromekevin@gmail.com',
+    support_phone: '0967 255 0423',
+    address: 'Calag-itan, Hinunangan, Southern Leyte',
+    business_hours: '8:00 AM - 6:00 PM',
+    website_url: '',
+  },
+  booking_rules: {
+    check_in_time: '08:00',
+    check_out_time: '18:00',
+    min_advance_hours: 2,
+    max_guest_per_booking: 50,
+    auto_approve_paid_bookings: true,
+    require_paid_check_in: true,
+  },
+  notifications: {
+    booking_alerts: true,
+    payment_updates: true,
+    check_in_alerts: true,
+    daily_summary: false,
+    admin_email: 'fieljeromekevin@gmail.com',
+  },
+};
 
 function toNull(value) {
   if (value === undefined || value === null || value === '') return null;
@@ -87,6 +115,285 @@ function formatLocalDate(date) {
 
 function normalizePromoCode(value) {
   return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function parseSettingValue(value, fallback) {
+  if (value == null || value === '') return { ...fallback };
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    return { ...fallback, ...(parsed && typeof parsed === 'object' ? parsed : {}) };
+  } catch (_) {
+    return { ...fallback };
+  }
+}
+
+function normalizeTime(value, field) {
+  const text = toText(value);
+  if (!text || !/^\d{2}:\d{2}$/.test(text)) {
+    throw new AppError(`${field} must be in HH:MM format`, 400);
+  }
+  return text;
+}
+
+function normalizeAppSettingsPayload(input = {}) {
+  const resortInput = input.resort_profile || input.resortProfile || {};
+  const bookingInput = input.booking_rules || input.bookingRules || {};
+  const notificationsInput = input.notifications || {};
+
+  const resort = {
+    resort_name: toText(resortInput.resort_name || resortInput.resortName) || DEFAULT_APP_SETTINGS.resort_profile.resort_name,
+    support_email: toText(resortInput.support_email || resortInput.supportEmail) || '',
+    support_phone: toText(resortInput.support_phone || resortInput.supportPhone) || '',
+    address: toText(resortInput.address) || '',
+    business_hours: toText(resortInput.business_hours || resortInput.businessHours) || '',
+    website_url: toText(resortInput.website_url || resortInput.websiteUrl) || '',
+  };
+
+  if (resort.support_email && !resort.support_email.includes('@')) {
+    throw new AppError('Support email must be valid', 400);
+  }
+
+  const booking = {
+    check_in_time: normalizeTime(bookingInput.check_in_time || bookingInput.checkInTime || DEFAULT_APP_SETTINGS.booking_rules.check_in_time, 'check_in_time'),
+    check_out_time: normalizeTime(bookingInput.check_out_time || bookingInput.checkOutTime || DEFAULT_APP_SETTINGS.booking_rules.check_out_time, 'check_out_time'),
+    min_advance_hours: toNonNegativeInteger(
+      bookingInput.min_advance_hours ?? bookingInput.minAdvanceHours ?? DEFAULT_APP_SETTINGS.booking_rules.min_advance_hours,
+      'min_advance_hours',
+      { required: true }
+    ),
+    max_guest_per_booking: toNonNegativeInteger(
+      bookingInput.max_guest_per_booking ?? bookingInput.maxGuestPerBooking ?? DEFAULT_APP_SETTINGS.booking_rules.max_guest_per_booking,
+      'max_guest_per_booking',
+      { required: true }
+    ),
+    auto_approve_paid_bookings: Boolean(toBoolean(
+      bookingInput.auto_approve_paid_bookings ?? bookingInput.autoApprovePaidBookings,
+      DEFAULT_APP_SETTINGS.booking_rules.auto_approve_paid_bookings
+    )),
+    require_paid_check_in: Boolean(toBoolean(
+      bookingInput.require_paid_check_in ?? bookingInput.requirePaidCheckIn,
+      DEFAULT_APP_SETTINGS.booking_rules.require_paid_check_in
+    )),
+  };
+
+  if (booking.max_guest_per_booking < 1) {
+    throw new AppError('max_guest_per_booking must be at least 1', 400);
+  }
+
+  const notifications = {
+    booking_alerts: Boolean(toBoolean(notificationsInput.booking_alerts ?? notificationsInput.bookingAlerts, DEFAULT_APP_SETTINGS.notifications.booking_alerts)),
+    payment_updates: Boolean(toBoolean(notificationsInput.payment_updates ?? notificationsInput.paymentUpdates, DEFAULT_APP_SETTINGS.notifications.payment_updates)),
+    check_in_alerts: Boolean(toBoolean(notificationsInput.check_in_alerts ?? notificationsInput.checkInAlerts, DEFAULT_APP_SETTINGS.notifications.check_in_alerts)),
+    daily_summary: Boolean(toBoolean(notificationsInput.daily_summary ?? notificationsInput.dailySummary, DEFAULT_APP_SETTINGS.notifications.daily_summary)),
+    admin_email: toText(notificationsInput.admin_email || notificationsInput.adminEmail) || '',
+  };
+
+  if (notifications.admin_email && !notifications.admin_email.includes('@')) {
+    throw new AppError('Admin notification email must be valid', 400);
+  }
+
+  return {
+    resort_profile: resort,
+    booking_rules: booking,
+    notifications,
+  };
+}
+
+function integrationStatus() {
+  const hasResend = Boolean(process.env.RESEND_API_KEY);
+  const hasBrevo = Boolean(process.env.BREVO_API_KEY);
+  return {
+    email: {
+      configured: hasResend || hasBrevo,
+      provider: hasResend ? 'Resend' : (hasBrevo ? 'Brevo' : 'Console fallback'),
+      from: process.env.EMAIL_FROM || process.env.MAIL_FROM || '',
+    },
+    google_oauth: {
+      configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      callback_url: process.env.GOOGLE_CALLBACK_URL || '',
+    },
+    github_oauth: {
+      configured: Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET),
+      callback_url: process.env.GITHUB_CALLBACK_URL || '',
+    },
+    payments: {
+      configured: Boolean(process.env.PAYMONGO_SECRET_KEY || process.env.PAYMONGO_PUBLIC_KEY),
+      provider: 'PayMongo',
+    },
+  };
+}
+
+async function ensureAppSettingsTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      setting_key VARCHAR(100) PRIMARY KEY,
+      setting_value TEXT NULL,
+      updated_by INT UNSIGNED NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+function normalizeUserDirectoryFilters(input = {}) {
+  const search = toText(input.search);
+  const type = toEnum(input.type);
+  const accessTier = toEnum(input.accessTier || input.access_tier);
+  const active = input.active === undefined || input.active === '' ? null : toBoolean(input.active);
+
+  if (type && !new Set(['CLIENT', 'STAFF', 'ALL']).has(type)) {
+    throw new AppError('type has an invalid value', 400);
+  }
+  if (accessTier && !USER_ACCESS_TIERS.has(accessTier)) {
+    throw new AppError('access tier has an invalid value', 400);
+  }
+
+  return {
+    search,
+    type: type || 'ALL',
+    accessTier,
+    active,
+  };
+}
+
+function normalizeStaffPayload(input = {}) {
+  const name = toText(input.name);
+  const email = toText(input.email)?.toLowerCase();
+  const phone = toText(input.phone);
+  const password = String(input.password || '');
+  const accessTier = toEnum(input.access_tier || input.accessTier) || 'STAFF';
+
+  if (!name || name.length < 2) throw new AppError('Name is required', 400);
+  if (!email || !email.includes('@')) throw new AppError('Valid email is required', 400);
+  if (password.length < 8) throw new AppError('Password must be at least 8 characters', 400);
+  if (!new Set(['ADMIN', 'STAFF', 'VIEWER']).has(accessTier)) {
+    throw new AppError('Staff access tier must be ADMIN, STAFF, or VIEWER', 400);
+  }
+
+  return { name, email, phone, password, accessTier };
+}
+
+function normalizeSystemLogFilters(input = {}) {
+  const search = toText(input.search);
+  const action = toText(input.action);
+  const moduleName = toText(input.module);
+  const actorType = toEnum(input.actorType || input.actor_type) || 'ALL';
+  const startDate = toText(input.startDate || input.start_date);
+  const endDate = toText(input.endDate || input.end_date);
+  const limitRaw = Number.parseInt(input.limit, 10);
+  const limit = Number.isInteger(limitRaw) ? Math.min(Math.max(limitRaw, 25), 500) : 200;
+
+  if (!new Set(['ALL', 'ADMIN', 'CLIENT', 'SYSTEM']).has(actorType)) {
+    throw new AppError('actorType has an invalid value', 400);
+  }
+  if (startDate && endDate && endDate < startDate) {
+    throw new AppError('endDate must be on or after startDate', 400);
+  }
+
+  return { search, action, moduleName, actorType, startDate, endDate, limit };
+}
+
+function buildSystemLogWhere(filters) {
+  const where = [];
+  const params = [];
+  const adminTierSql = "UPPER(COALESCE(u.access_tier, u.role, '')) IN ('SUPER_ADMIN', 'ADMIN', 'STAFF', 'VIEWER')";
+
+  if (filters.search) {
+    where.push(`(
+      sl.action LIKE ?
+      OR sl.module LIKE ?
+      OR sl.target_type LIKE ?
+      OR sl.target_id LIKE ?
+      OR sl.details LIKE ?
+      OR sl.ip_address LIKE ?
+      OR u.name LIKE ?
+      OR u.email LIKE ?
+    )`);
+    params.push(
+      `%${filters.search}%`,
+      `%${filters.search}%`,
+      `%${filters.search}%`,
+      `%${filters.search}%`,
+      `%${filters.search}%`,
+      `%${filters.search}%`,
+      `%${filters.search}%`,
+      `%${filters.search}%`
+    );
+  }
+  if (filters.action) {
+    where.push('sl.action = ?');
+    params.push(filters.action);
+  }
+  if (filters.moduleName) {
+    where.push('sl.module = ?');
+    params.push(filters.moduleName);
+  }
+  if (filters.startDate) {
+    where.push('DATE(sl.created_at) >= ?');
+    params.push(filters.startDate);
+  }
+  if (filters.endDate) {
+    where.push('DATE(sl.created_at) <= ?');
+    params.push(filters.endDate);
+  }
+  if (filters.actorType === 'ADMIN') {
+    where.push(adminTierSql);
+  } else if (filters.actorType === 'CLIENT') {
+    where.push(`u.id IS NOT NULL AND NOT (${adminTierSql})`);
+  } else if (filters.actorType === 'SYSTEM') {
+    where.push('u.id IS NULL');
+  }
+
+  return {
+    sql: where.length ? `WHERE ${where.join(' AND ')}` : '',
+    params,
+  };
+}
+
+function normalizeReportFilters(input = {}) {
+  const today = new Date();
+  const firstDay = formatLocalDate(new Date(today.getFullYear(), today.getMonth(), 1));
+  const lastDay = formatLocalDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+  const startDate = toText(input.startDate || input.start_date) || firstDay;
+  const endDate = toText(input.endDate || input.end_date) || lastDay;
+  const category = toEnum(input.category);
+  const bookingStatus = toText(input.bookingStatus || input.booking_status);
+  const paymentStatus = toText(input.paymentStatus || input.payment_status);
+
+  if (endDate < startDate) {
+    throw new AppError('endDate must be on or after startDate', 400);
+  }
+  if (category && !CATEGORIES.has(category)) {
+    throw new AppError('category has an invalid value', 400);
+  }
+
+  return {
+    startDate,
+    endDate,
+    category,
+    bookingStatus: bookingStatus ? bookingStatus.toLowerCase() : null,
+    paymentStatus: paymentStatus ? paymentStatus.toLowerCase() : null,
+  };
+}
+
+function buildReportWhere(filters) {
+  const where = ['b.date BETWEEN ? AND ?'];
+  const params = [filters.startDate, filters.endDate];
+
+  if (filters.category) {
+    where.push('f.category = ?');
+    params.push(filters.category);
+  }
+  if (filters.bookingStatus) {
+    where.push('b.status = ?');
+    params.push(filters.bookingStatus);
+  }
+  if (filters.paymentStatus) {
+    where.push('COALESCE(b.payment_status, "pending") = ?');
+    params.push(filters.paymentStatus);
+  }
+
+  return { where: where.join(' AND '), params };
 }
 
 async function generateUniquePromoCode() {
@@ -328,6 +635,395 @@ async function getCategoryUsageChart() {
   return {
     labels: rows.map((r) => String(r.label).replace(/_/g, ' ')),
     values: rows.map((r) => Number(r.value || 0)),
+  };
+}
+
+async function getSettings() {
+  await ensureAppSettingsTable();
+  const [rows] = await pool.query(
+    `SELECT setting_key, setting_value, updated_at
+     FROM app_settings
+     WHERE setting_key IN ('resort_profile', 'booking_rules', 'notifications')`
+  );
+  const rowMap = new Map(rows.map((row) => [row.setting_key, row]));
+  const settings = {};
+  for (const [key, fallback] of Object.entries(DEFAULT_APP_SETTINGS)) {
+    settings[key] = parseSettingValue(rowMap.get(key)?.setting_value, fallback);
+  }
+
+  return {
+    settings,
+    integrations: integrationStatus(),
+    updated_at: rows.reduce((latest, row) => {
+      if (!latest) return row.updated_at;
+      return new Date(row.updated_at) > new Date(latest) ? row.updated_at : latest;
+    }, null),
+  };
+}
+
+async function updateSettings(input = {}, updatedBy = null) {
+  await ensureAppSettingsTable();
+  const settings = normalizeAppSettingsPayload(input);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    for (const [key, value] of Object.entries(settings)) {
+      await conn.query(
+        `INSERT INTO app_settings (setting_key, setting_value, updated_by)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by), updated_at = CURRENT_TIMESTAMP`,
+        [key, JSON.stringify(value), updatedBy || null]
+      );
+    }
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+  return getSettings();
+}
+
+async function listUsers(filtersInput = {}) {
+  const filters = normalizeUserDirectoryFilters(filtersInput);
+  const where = [];
+  const params = [];
+
+  if (filters.search) {
+    where.push('(u.name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)');
+    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+  if (filters.type === 'CLIENT') {
+    where.push("COALESCE(u.access_tier, u.role, 'GUEST') = 'GUEST'");
+  } else if (filters.type === 'STAFF') {
+    where.push("COALESCE(u.access_tier, u.role, 'GUEST') <> 'GUEST'");
+  }
+  if (filters.accessTier) {
+    where.push('COALESCE(u.access_tier, u.role) = ?');
+    params.push(filters.accessTier);
+  }
+  if (filters.active !== null) {
+    where.push('COALESCE(u.active, 1) = ?');
+    params.push(filters.active);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const [[summary]] = await pool.query(`
+    SELECT
+      COUNT(*) AS total_users,
+      SUM(COALESCE(access_tier, role, 'GUEST') = 'GUEST') AS client_count,
+      SUM(COALESCE(access_tier, role, 'GUEST') <> 'GUEST') AS staff_count,
+      SUM(COALESCE(active, 1) = 1) AS active_count,
+      SUM(COALESCE(active, 1) = 0) AS inactive_count,
+      SUM(email_verified_at IS NOT NULL) AS verified_count
+    FROM users
+  `);
+
+  const [rows] = await pool.query(
+    `SELECT
+       u.id,
+       u.name,
+       u.email,
+       u.phone,
+       u.role,
+       COALESCE(u.access_tier, u.role, 'GUEST') AS access_tier,
+       u.avatar_url,
+       COALESCE(u.active, 1) AS active,
+       u.email_verified_at,
+       u.last_login_at,
+       u.created_at,
+       COUNT(DISTINCT b.id) AS booking_count,
+       COALESCE(SUM(CASE WHEN COALESCE(b.payment_status, 'pending') = 'paid' THEN b.total_amount ELSE 0 END), 0) AS paid_revenue,
+       MAX(b.date) AS latest_booking_date
+     FROM users u
+     LEFT JOIN bookings b ON b.user_id = u.id
+     ${whereSql}
+     GROUP BY
+       u.id, u.name, u.email, u.phone, u.role, u.access_tier, u.avatar_url,
+       u.active, u.email_verified_at, u.last_login_at, u.created_at
+     ORDER BY
+       (COALESCE(u.access_tier, u.role, 'GUEST') = 'GUEST') ASC,
+       u.created_at DESC,
+       u.id DESC
+     LIMIT 500`,
+    params
+  );
+
+  return {
+    filters,
+    summary: {
+      totalUsers: Number(summary.total_users || 0),
+      clientCount: Number(summary.client_count || 0),
+      staffCount: Number(summary.staff_count || 0),
+      activeCount: Number(summary.active_count || 0),
+      inactiveCount: Number(summary.inactive_count || 0),
+      verifiedCount: Number(summary.verified_count || 0),
+    },
+    users: rows.map((row) => ({
+      ...row,
+      active: Boolean(row.active),
+      booking_count: Number(row.booking_count || 0),
+      paid_revenue: Number(row.paid_revenue || 0),
+    })),
+  };
+}
+
+async function createStaffUser(input = {}) {
+  const data = normalizeStaffPayload(input);
+  const [existing] = await pool.query('SELECT id FROM users WHERE email = ? LIMIT 1', [data.email]);
+  if (existing.length) {
+    throw new AppError('Email already exists', 409);
+  }
+
+  const passwordHash = await hashPassword(data.password);
+  const [result] = await pool.query(
+    `INSERT INTO users
+      (name, email, phone, password, password_hash, role, access_tier, active, email_verified_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
+    [data.name, data.email, data.phone, null, passwordHash, data.accessTier, data.accessTier]
+  );
+
+  return { id: result.insertId };
+}
+
+async function updateUserAccess(id, input = {}, actorUserId = null) {
+  const userId = Number.parseInt(id, 10);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new AppError('Invalid user id', 400);
+  }
+
+  const [existingRows] = await pool.query('SELECT id, role, access_tier, active FROM users WHERE id = ?', [userId]);
+  if (!existingRows.length) throw new AppError('User not found', 404);
+
+  const active = input.active === undefined || input.active === null || input.active === ''
+    ? toBoolean(existingRows[0].active, true)
+    : toBoolean(input.active);
+  const accessTier = toEnum(input.access_tier || input.accessTier) || toEnum(existingRows[0].access_tier || existingRows[0].role) || 'GUEST';
+  if (!USER_ACCESS_TIERS.has(accessTier)) {
+    throw new AppError('access tier has an invalid value', 400);
+  }
+  if (userId === Number(actorUserId) && active === 0) {
+    throw new AppError('You cannot deactivate your own account', 400);
+  }
+
+  const [superAdmins] = await pool.query(
+    "SELECT COUNT(*) AS count FROM users WHERE COALESCE(access_tier, role) = 'SUPER_ADMIN' AND COALESCE(active, 1) = 1"
+  );
+  const existingTier = toEnum(existingRows[0].access_tier || existingRows[0].role);
+  if (existingTier === 'SUPER_ADMIN' && (accessTier !== 'SUPER_ADMIN' || active === 0) && Number(superAdmins[0].count || 0) <= 1) {
+    throw new AppError('At least one active SUPER_ADMIN account is required', 400);
+  }
+
+  await pool.query(
+    'UPDATE users SET role = ?, access_tier = ?, active = ? WHERE id = ?',
+    [accessTier, accessTier, active, userId]
+  );
+
+  return { id: userId, access_tier: accessTier, active: Boolean(active) };
+}
+
+async function listSystemLogs(filtersInput = {}) {
+  const filters = normalizeSystemLogFilters(filtersInput);
+  const { sql, params } = buildSystemLogWhere(filters);
+  const adminTierCase = "UPPER(COALESCE(u.access_tier, u.role, '')) IN ('SUPER_ADMIN', 'ADMIN', 'STAFF', 'VIEWER')";
+
+  const [[summary]] = await pool.query(
+    `SELECT
+       COUNT(*) AS total_logs,
+       SUM(${adminTierCase}) AS admin_logs,
+       SUM(COALESCE(sl.module, 'AUTH') = 'AUTH') AS auth_logs,
+       SUM(sl.action LIKE '%FAILED%' OR sl.action LIKE '%UNAUTHORIZED%' OR sl.action LIKE '%ERROR%') AS security_logs,
+       SUM(DATE(sl.created_at) = CURRENT_DATE()) AS today_logs
+     FROM system_logs sl
+     LEFT JOIN users u ON u.id = sl.user_id
+     ${sql}`,
+    params
+  );
+
+  const [rows] = await pool.query(
+    `SELECT
+       sl.id,
+       sl.user_id,
+       sl.action,
+       COALESCE(sl.module, 'LEGACY') AS module,
+       COALESCE(sl.target_type, sl.entity_type) AS target_type,
+       COALESCE(sl.target_id, CAST(sl.entity_id AS CHAR)) AS target_id,
+       sl.details,
+       sl.ip_address,
+       sl.user_agent,
+       sl.created_at,
+       u.name AS user_name,
+       u.email AS user_email,
+       u.role AS user_role,
+       COALESCE(u.access_tier, u.role) AS user_access_tier
+     FROM system_logs sl
+     LEFT JOIN users u ON u.id = sl.user_id
+     ${sql}
+     ORDER BY sl.created_at DESC, sl.id DESC
+     LIMIT ${filters.limit}`,
+    params
+  );
+
+  const [actions] = await pool.query(`
+    SELECT DISTINCT action
+    FROM system_logs
+    WHERE action IS NOT NULL
+    ORDER BY action ASC
+    LIMIT 200
+  `);
+
+  const [modules] = await pool.query(`
+    SELECT DISTINCT COALESCE(module, 'LEGACY') AS module
+    FROM system_logs
+    ORDER BY module ASC
+    LIMIT 100
+  `);
+
+  return {
+    filters,
+    summary: {
+      totalLogs: Number(summary.total_logs || 0),
+      adminLogs: Number(summary.admin_logs || 0),
+      authLogs: Number(summary.auth_logs || 0),
+      securityLogs: Number(summary.security_logs || 0),
+      todayLogs: Number(summary.today_logs || 0),
+    },
+    options: {
+      actions: actions.map((row) => row.action),
+      modules: modules.map((row) => row.module),
+    },
+    logs: rows,
+  };
+}
+
+async function getReports(filtersInput = {}) {
+  const filters = normalizeReportFilters(filtersInput);
+  const { where, params } = buildReportWhere(filters);
+
+  const [[summary]] = await pool.query(
+    `SELECT
+       COUNT(*) AS total_bookings,
+       SUM(b.status = 'approved') AS approved_bookings,
+       SUM(b.status = 'pending') AS pending_bookings,
+       SUM(b.status = 'cancelled') AS cancelled_bookings,
+       SUM(COALESCE(b.payment_status, 'pending') = 'paid') AS paid_bookings,
+       SUM(COALESCE(b.payment_status, 'pending') = 'pending') AS pending_payments,
+       SUM(COALESCE(b.payment_status, 'pending') = 'failed') AS failed_payments,
+       SUM(CASE WHEN COALESCE(b.payment_status, 'pending') = 'paid' THEN COALESCE(b.total_amount, 0) ELSE 0 END) AS total_revenue,
+       AVG(CASE WHEN COALESCE(b.payment_status, 'pending') = 'paid' THEN COALESCE(b.total_amount, 0) ELSE NULL END) AS average_paid_booking,
+       SUM(COALESCE(b.guest_count, 0)) AS total_guests,
+       SUM(CASE WHEN t.status = 'used' THEN 1 ELSE 0 END) AS checked_in_count
+     FROM bookings b
+     INNER JOIN facilities f ON f.id = b.facility_id
+     LEFT JOIN tickets t ON t.booking_id = b.id
+     WHERE ${where}`,
+    params
+  );
+
+  const [dailyRevenueRows] = await pool.query(
+    `SELECT DATE_FORMAT(b.date, '%Y-%m-%d') AS label,
+            COALESCE(SUM(CASE WHEN COALESCE(b.payment_status, 'pending') = 'paid' THEN b.total_amount ELSE 0 END), 0) AS value
+     FROM bookings b
+     INNER JOIN facilities f ON f.id = b.facility_id
+     WHERE ${where}
+     GROUP BY b.date
+     ORDER BY b.date ASC`,
+    params
+  );
+
+  const [categoryRows] = await pool.query(
+    `SELECT f.category AS label,
+            COUNT(*) AS bookings,
+            COALESCE(SUM(CASE WHEN COALESCE(b.payment_status, 'pending') = 'paid' THEN b.total_amount ELSE 0 END), 0) AS revenue
+     FROM bookings b
+     INNER JOIN facilities f ON f.id = b.facility_id
+     WHERE ${where}
+     GROUP BY f.category
+     ORDER BY revenue DESC, bookings DESC`,
+    params
+  );
+
+  const [paymentRows] = await pool.query(
+    `SELECT COALESCE(b.payment_status, 'pending') AS label, COUNT(*) AS value
+     FROM bookings b
+     INNER JOIN facilities f ON f.id = b.facility_id
+     WHERE ${where}
+     GROUP BY COALESCE(b.payment_status, 'pending')
+     ORDER BY FIELD(label, 'paid', 'pending', 'failed', 'refunded')`,
+    params
+  );
+
+  const [bookingRows] = await pool.query(
+    `SELECT
+       b.id,
+       DATE_FORMAT(b.date, '%Y-%m-%d') AS date,
+       b.start_time,
+       b.end_time,
+       b.status,
+       COALESCE(b.payment_status, 'pending') AS payment_status,
+       COALESCE(b.quantity, 1) AS quantity,
+       COALESCE(b.guest_count, 1) AS guest_count,
+       COALESCE(b.total_amount, 0) AS total_amount,
+       b.booking_type,
+       u.name AS user_name,
+       u.email AS user_email,
+       f.name AS facility_name,
+       f.category AS facility_category,
+       t.reference_number,
+       t.status AS ticket_status,
+       p.payment_method,
+       p.gcash_ref_no,
+       p.provider_payment_id
+     FROM bookings b
+     INNER JOIN users u ON u.id = b.user_id
+     INNER JOIN facilities f ON f.id = b.facility_id
+     LEFT JOIN tickets t ON t.booking_id = b.id
+     LEFT JOIN payments p ON p.id = (
+       SELECT p2.id
+       FROM payments p2
+       WHERE p2.booking_id = b.id
+       ORDER BY (p2.status = 'paid') DESC, p2.updated_at DESC, p2.id DESC
+       LIMIT 1
+     )
+     WHERE ${where}
+     ORDER BY b.date DESC, b.created_at DESC
+     LIMIT 1000`,
+    params
+  );
+
+  return {
+    filters,
+    summary: {
+      totalBookings: Number(summary.total_bookings || 0),
+      approvedBookings: Number(summary.approved_bookings || 0),
+      pendingBookings: Number(summary.pending_bookings || 0),
+      cancelledBookings: Number(summary.cancelled_bookings || 0),
+      paidBookings: Number(summary.paid_bookings || 0),
+      pendingPayments: Number(summary.pending_payments || 0),
+      failedPayments: Number(summary.failed_payments || 0),
+      totalRevenue: Number(summary.total_revenue || 0),
+      averagePaidBooking: Number(summary.average_paid_booking || 0),
+      totalGuests: Number(summary.total_guests || 0),
+      checkedInCount: Number(summary.checked_in_count || 0),
+    },
+    charts: {
+      dailyRevenue: {
+        labels: dailyRevenueRows.map((row) => row.label),
+        values: dailyRevenueRows.map((row) => Number(row.value || 0)),
+      },
+      categoryRevenue: {
+        labels: categoryRows.map((row) => String(row.label || 'UNKNOWN').replace(/_/g, ' ')),
+        values: categoryRows.map((row) => Number(row.revenue || 0)),
+        bookings: categoryRows.map((row) => Number(row.bookings || 0)),
+      },
+      paymentStatus: {
+        labels: paymentRows.map((row) => String(row.label || 'pending').toUpperCase()),
+        values: paymentRows.map((row) => Number(row.value || 0)),
+      },
+    },
+    rows: bookingRows,
   };
 }
 
@@ -859,6 +1555,13 @@ module.exports = {
   getPaymentStatusChart,
   getOccupancyChart,
   getCategoryUsageChart,
+  getSettings,
+  updateSettings,
+  getReports,
+  listUsers,
+  createStaffUser,
+  updateUserAccess,
+  listSystemLogs,
   getAllFacilitiesAdmin,
   getFacilityByIdAdmin,
   createFacility,

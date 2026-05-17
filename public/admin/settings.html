@@ -14,47 +14,125 @@
 
   <header class="page-header">
     <h1 class="page-title">Settings</h1>
-    <p class="page-subtitle">Resort profile, notification preferences, and integration keys will live here.</p>
+    <p class="page-subtitle">Manage resort profile, booking rules, notifications, and integration status.</p>
   </header>
 
-  <section class="settings-grid" aria-label="System settings">
-    <article class="form-card admin-reveal">
-      <div class="module-card-header">
-        <span class="module-icon"><i data-lucide="building-2"></i></span>
-        <div>
-          <h2>Resort profile</h2>
-          <p>Keep public resort details consistent across booking pages.</p>
-        </div>
-      </div>
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label for="resortName">Resort name</label>
-          <input id="resortName" class="form-control" type="text" value="Mamagan Fun & Adventure Beach Resort">
-        </div>
-        <div class="form-group">
-          <label for="supportEmail">Support email</label>
-          <input id="supportEmail" class="form-control" type="email" placeholder="support@example.com">
-        </div>
-      </div>
-    </article>
+  <div id="settingsAlert" class="dashboard-alert is-hidden" role="status" aria-live="polite"></div>
 
-    <article class="form-card admin-reveal">
-      <div class="module-card-header">
-        <span class="module-icon module-icon-accent"><i data-lucide="bell-ring"></i></span>
-        <div>
-          <h2>Notifications</h2>
-          <p>Prepare alerts for bookings, payments, and check-ins.</p>
+  <form id="settingsForm">
+    <section class="settings-grid" aria-label="System settings">
+      <article class="form-card admin-reveal">
+        <div class="module-card-header">
+          <span class="module-icon"><i data-lucide="building-2"></i></span>
+          <div>
+            <h2>Resort Profile</h2>
+            <p>Public resort details used by booking, reports, and admin records.</p>
+          </div>
         </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="resortName">Resort name</label>
+            <input id="resortName" class="form-control" type="text" required>
+          </div>
+          <div class="form-group">
+            <label for="supportEmail">Support email</label>
+            <input id="supportEmail" class="form-control" type="email">
+          </div>
+          <div class="form-group">
+            <label for="supportPhone">Support phone</label>
+            <input id="supportPhone" class="form-control" type="tel">
+          </div>
+          <div class="form-group">
+            <label for="websiteUrl">Website URL</label>
+            <input id="websiteUrl" class="form-control" type="url" placeholder="https://example.com">
+          </div>
+          <div class="form-group form-group-wide">
+            <label for="resortAddress">Address</label>
+            <input id="resortAddress" class="form-control" type="text">
+          </div>
+          <div class="form-group form-group-wide">
+            <label for="businessHours">Business hours</label>
+            <input id="businessHours" class="form-control" type="text" placeholder="8:00 AM - 6:00 PM">
+          </div>
+        </div>
+      </article>
+
+      <article class="form-card admin-reveal">
+        <div class="module-card-header">
+          <span class="module-icon module-icon-accent"><i data-lucide="calendar-clock"></i></span>
+          <div>
+            <h2>Booking Rules</h2>
+            <p>Default operational rules used by booking and check-in workflows.</p>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="checkInTime">Default check-in time</label>
+            <input id="checkInTime" class="form-control" type="time" required>
+          </div>
+          <div class="form-group">
+            <label for="checkOutTime">Default check-out time</label>
+            <input id="checkOutTime" class="form-control" type="time" required>
+          </div>
+          <div class="form-group">
+            <label for="minAdvanceHours">Minimum advance hours</label>
+            <input id="minAdvanceHours" class="form-control" type="number" min="0" step="1" required>
+          </div>
+          <div class="form-group">
+            <label for="maxGuestPerBooking">Max guests per booking</label>
+            <input id="maxGuestPerBooking" class="form-control" type="number" min="1" step="1" required>
+          </div>
+        </div>
+        <div class="settings-toggle-list">
+          <label><input id="autoApprovePaidBookings" type="checkbox"> Auto-approve paid bookings</label>
+          <label><input id="requirePaidCheckIn" type="checkbox"> Require paid status before check-in</label>
+        </div>
+      </article>
+
+      <article class="form-card admin-reveal">
+        <div class="module-card-header">
+          <span class="module-icon"><i data-lucide="bell-ring"></i></span>
+          <div>
+            <h2>Notifications</h2>
+            <p>Control operational alerts for bookings, payments, and check-ins.</p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="adminEmail">Admin notification email</label>
+          <input id="adminEmail" class="form-control" type="email">
+        </div>
+        <div class="settings-toggle-list">
+          <label><input id="bookingAlerts" type="checkbox"> Booking alerts</label>
+          <label><input id="paymentUpdates" type="checkbox"> Payment updates</label>
+          <label><input id="checkInAlerts" type="checkbox"> Check-in alerts</label>
+          <label><input id="dailySummary" type="checkbox"> Daily summary</label>
+        </div>
+      </article>
+
+      <article class="form-card admin-reveal">
+        <div class="module-card-header">
+          <span class="module-icon module-icon-accent"><i data-lucide="plug-zap"></i></span>
+          <div>
+            <h2>Integrations</h2>
+            <p>Read-only deployment status. Secrets are configured in environment variables.</p>
+          </div>
+        </div>
+        <div class="settings-integration-list" id="integrationList">
+          <div class="table-empty">Loading integration status...</div>
+        </div>
+      </article>
+    </section>
+
+    <div class="settings-actions">
+      <div class="settings-meta" id="settingsUpdatedAt">Last updated: -</div>
+      <div>
+        <button type="button" class="btn btn-secondary" id="reloadSettingsBtn"><i data-lucide="rotate-ccw"></i> Reload</button>
+        <button type="submit" class="btn btn-primary" id="saveSettingsBtn"><i data-lucide="save"></i> Save Settings</button>
       </div>
-      <div class="checkbox-row">
-        <label><input type="checkbox" checked> Booking alerts</label>
-        <label><input type="checkbox" checked> Payment updates</label>
-        <label><input type="checkbox"> Daily summary</label>
-      </div>
-    </article>
-  </section>
+    </div>
+  </form>
 
   <script src="/assets/js/admin-layout.js"></script>
-  <script>lucide.createIcons();</script>
+  <script src="/admin/js/settings.js"></script>
 </body>
 </html>

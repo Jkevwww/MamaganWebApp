@@ -77,6 +77,102 @@ async function getCategoryUsageChart(req, res, next) {
   }
 }
 
+async function getReports(req, res, next) {
+  try {
+    const data = await adminService.getReports(req.query);
+    res.status(200).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listUsers(req, res, next) {
+  try {
+    const data = await adminService.listUsers(req.query);
+    res.status(200).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createStaffUser(req, res, next) {
+  try {
+    const result = await adminService.createStaffUser(req.body);
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: 'STAFF_USER_CREATED',
+      module: 'USERS',
+      targetType: 'USER',
+      targetId: result.id,
+      details: { email: req.body?.email, access_tier: req.body?.access_tier || req.body?.accessTier },
+      ipAddress,
+      userAgent,
+    });
+    res.status(201).json({ ...result, message: 'Staff account created' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateUserAccess(req, res, next) {
+  try {
+    const result = await adminService.updateUserAccess(req.params.id, req.body, req.user?.id || null);
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: 'USER_ACCESS_UPDATED',
+      module: 'USERS',
+      targetType: 'USER',
+      targetId: result.id,
+      details: { access_tier: result.access_tier, active: result.active },
+      ipAddress,
+      userAgent,
+    });
+    res.status(200).json({ ...result, message: 'User account updated' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listSystemLogs(req, res, next) {
+  try {
+    const data = await adminService.listSystemLogs(req.query);
+    res.status(200).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getSettings(req, res, next) {
+  try {
+    const data = await adminService.getSettings();
+    res.status(200).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateSettings(req, res, next) {
+  try {
+    const data = await adminService.updateSettings(req.body, req.user?.id || null);
+    const { userId, ipAddress, userAgent } = requestMeta(req);
+    await logSystemAction({
+      userId,
+      action: 'SETTINGS_UPDATED',
+      module: 'SETTINGS',
+      targetType: 'APP_SETTINGS',
+      targetId: 'global',
+      details: { sections: Object.keys(req.body || {}) },
+      ipAddress,
+      userAgent,
+    });
+    res.status(200).json({ ...data, message: 'Settings updated' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Facilities
 async function getAllFacilities(req, res, next) {
   try {
@@ -378,6 +474,13 @@ module.exports = {
   getPaymentStatusChart,
   getOccupancyChart,
   getCategoryUsageChart,
+  getReports,
+  listUsers,
+  createStaffUser,
+  updateUserAccess,
+  listSystemLogs,
+  getSettings,
+  updateSettings,
   getAllFacilities,
   getFacilityById,
   createFacility,

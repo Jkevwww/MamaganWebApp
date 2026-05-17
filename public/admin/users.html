@@ -13,46 +13,156 @@
 <body class="admin-body">
 
   <header class="page-header">
-    <h1 class="page-title">Clients &amp; users</h1>
-    <p class="page-subtitle">Guest accounts and roles will be managed from this workspace once connected to the user directory API.</p>
+    <h1 class="page-title">Clients &amp; Users</h1>
+    <p class="page-subtitle">Manage guest clients, staff accounts, access tiers, and account status.</p>
   </header>
 
-  <section class="module-grid" aria-label="User management overview">
-    <article class="module-card">
-      <div class="module-card-header">
-        <span class="module-icon"><i data-lucide="users"></i></span>
-        <div>
-          <h2>Account directory</h2>
-          <p>Review guests, staff, admins, and viewer accounts from one place.</p>
-        </div>
-      </div>
-      <div class="preview-list">
-        <span>Guests</span>
-        <strong>Tourist access</strong>
-      </div>
-      <div class="preview-list">
-        <span>Staff</span>
-        <strong>Operations access</strong>
-      </div>
-      <div class="preview-list">
-        <span>Admins</span>
-        <strong>Management access</strong>
-      </div>
-    </article>
+  <div id="usersAlert" class="dashboard-alert is-hidden" role="status" aria-live="polite"></div>
 
-    <article class="module-card">
-      <div class="module-card-header">
-        <span class="module-icon module-icon-accent"><i data-lucide="shield-check"></i></span>
-        <div>
-          <h2>Access tiers</h2>
-          <p>Manage SUPER_ADMIN, ADMIN, STAFF, VIEWER, and GUEST permissions.</p>
-        </div>
-      </div>
-      <button type="button" class="btn btn-primary btn-block">Add staff account</button>
+  <section class="dashboard-stats-grid" aria-label="Users summary">
+    <article class="stat-card">
+      <span class="stat-label">Total accounts</span>
+      <strong class="stat-value" id="totalUsers">0</strong>
+      <span class="stat-sub" id="verifiedUsers">0 verified emails</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Clients</span>
+      <strong class="stat-value" id="clientCount">0</strong>
+      <span class="stat-sub">Guest and tourist access</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Staff / Admin</span>
+      <strong class="stat-value stat-value-accent" id="staffCount">0</strong>
+      <span class="stat-sub">Operational access accounts</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Inactive</span>
+      <strong class="stat-value" id="inactiveCount">0</strong>
+      <span class="stat-sub" id="activeCount">0 active accounts</span>
     </article>
   </section>
 
+  <form id="usersFilters" class="toolbar users-toolbar" aria-label="User directory filters">
+    <div class="users-filter-grid">
+      <div>
+        <label for="userSearch" class="form-label">Search</label>
+        <input type="search" id="userSearch" class="form-control" placeholder="Name, email, or phone">
+      </div>
+      <div>
+        <label for="userTypeFilter" class="form-label">Directory type</label>
+        <select id="userTypeFilter" class="form-select">
+          <option value="ALL">All accounts</option>
+          <option value="CLIENT">Clients only</option>
+          <option value="STAFF">Staff/Admin only</option>
+        </select>
+      </div>
+      <div>
+        <label for="accessTierFilter" class="form-label">Access tier</label>
+        <select id="accessTierFilter" class="form-select">
+          <option value="">All tiers</option>
+          <option value="GUEST">Guest</option>
+          <option value="VIEWER">Viewer</option>
+          <option value="STAFF">Staff</option>
+          <option value="ADMIN">Admin</option>
+          <option value="SUPER_ADMIN">Super Admin</option>
+        </select>
+      </div>
+      <div>
+        <label for="activeFilter" class="form-label">Status</label>
+        <select id="activeFilter" class="form-select">
+          <option value="">All statuses</option>
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="users-actions">
+      <button type="submit" class="btn btn-primary"><i data-lucide="filter"></i> Apply</button>
+      <button type="button" class="btn btn-secondary" id="resetUsersBtn"><i data-lucide="rotate-ccw"></i> Reset</button>
+      <button type="button" class="btn btn-primary" id="openStaffModalBtn"><i data-lucide="user-plus"></i> Add Staff</button>
+    </div>
+  </form>
+
+  <section class="table-card">
+    <div class="users-table-heading">
+      <div>
+        <h3>Account Directory</h3>
+        <p class="text-muted small-muted">Clients are guest accounts. Staff, viewer, admin, and super admin accounts have admin panel access.</p>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table" id="usersTable">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Contact</th>
+            <th>Type</th>
+            <th>Access Tier</th>
+            <th>Status</th>
+            <th>Bookings</th>
+            <th>Paid Revenue</th>
+            <th>Last Login</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="modal-overlay" id="staffModal" aria-hidden="true">
+    <div class="modal-dialog users-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="staffModalTitle">
+      <div class="modal-header">
+        <div>
+          <h2 id="staffModalTitle">Add staff account</h2>
+          <p class="modal-subtitle">Create an operational account for admin panel access.</p>
+        </div>
+        <button type="button" class="modal-close" id="closeStaffModalBtn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="staffForm">
+        <div class="modal-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="staffName">Full name</label>
+              <input type="text" id="staffName" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="staffEmail">Email</label>
+              <input type="email" id="staffEmail" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="staffPhone">Phone</label>
+              <input type="tel" id="staffPhone" class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="staffAccessTier">Access tier</label>
+              <select id="staffAccessTier" class="form-select" required>
+                <option value="STAFF">Staff</option>
+                <option value="VIEWER">Viewer</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="staffPassword">Temporary password</label>
+              <input type="password" id="staffPassword" class="form-control" minlength="8" required>
+            </div>
+            <div class="form-group">
+              <label for="staffConfirmPassword">Confirm password</label>
+              <input type="password" id="staffConfirmPassword" class="form-control" minlength="8" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelStaffBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveStaffBtn">Create Staff</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="/assets/js/admin-layout.js"></script>
-  <script>lucide.createIcons();</script>
+  <script src="/admin/js/users.js"></script>
 </body>
 </html>

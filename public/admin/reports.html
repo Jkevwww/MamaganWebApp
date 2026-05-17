@@ -9,45 +9,157 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/css/admin.css">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="admin-body">
 
   <header class="page-header">
     <h1 class="page-title">Reports</h1>
-    <p class="page-subtitle">Export revenue, occupancy, and payment summaries from this area once reporting endpoints are connected.</p>
+    <p class="page-subtitle">Review revenue, booking activity, payment status, and export report data.</p>
   </header>
 
-  <section class="module-grid module-grid-wide" aria-label="Reports overview">
-    <article class="module-card">
-      <div class="module-card-header">
-        <span class="module-icon"><i data-lucide="bar-chart-3"></i></span>
-        <div>
-          <h2>Revenue trends</h2>
-          <p>Compare booking revenue across day, night, hourly, and daily rentals.</p>
-        </div>
-      </div>
-      <div class="chart-preview" aria-label="Revenue chart preview">
-        <span class="bar bar-sm"></span>
-        <span class="bar bar-md"></span>
-        <span class="bar bar-lg"></span>
-        <span class="bar bar-xl"></span>
-        <span class="bar bar-md"></span>
-      </div>
-    </article>
+  <div id="reportsAlert" class="dashboard-alert is-hidden" role="status" aria-live="polite"></div>
 
-    <article class="module-card">
-      <div class="module-card-header">
-        <span class="module-icon module-icon-accent"><i data-lucide="download"></i></span>
-        <div>
-          <h2>Exports</h2>
-          <p>Generate operational summaries for reservations, payments, and occupancy.</p>
-        </div>
+  <form id="reportsFilters" class="toolbar reports-toolbar" aria-label="Report filters">
+    <div class="reports-filter-grid">
+      <div>
+        <label for="startDate" class="form-label">Start date</label>
+        <input type="date" id="startDate" class="form-control">
       </div>
-      <button type="button" class="btn btn-primary btn-block">Export report</button>
+      <div>
+        <label for="endDate" class="form-label">End date</label>
+        <input type="date" id="endDate" class="form-control">
+      </div>
+      <div>
+        <label for="categoryFilter" class="form-label">Facility category</label>
+        <select id="categoryFilter" class="form-select">
+          <option value="">All categories</option>
+          <option value="COTTAGE">Cottage</option>
+          <option value="CABANA">Rooms & Cabanas</option>
+          <option value="BEACH_EQUIPMENT">Beach Equipment</option>
+        </select>
+      </div>
+      <div>
+        <label for="bookingStatusFilter" class="form-label">Booking status</label>
+        <select id="bookingStatusFilter" class="form-select">
+          <option value="">All bookings</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div>
+        <label for="paymentStatusFilter" class="form-label">Payment status</label>
+        <select id="paymentStatusFilter" class="form-select">
+          <option value="">All payments</option>
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+          <option value="failed">Failed</option>
+          <option value="refunded">Refunded</option>
+        </select>
+      </div>
+    </div>
+    <div class="reports-actions">
+      <button type="submit" class="btn btn-primary"><i data-lucide="filter"></i> Apply</button>
+      <button type="button" class="btn btn-secondary" id="resetReportsBtn"><i data-lucide="rotate-ccw"></i> Reset</button>
+      <button type="button" class="btn btn-secondary" id="exportReportsBtn"><i data-lucide="download"></i> Export CSV</button>
+      <button type="button" class="btn btn-secondary" id="exportDocxBtn"><i data-lucide="file-text"></i> Export DOCX</button>
+      <button type="button" class="btn btn-secondary" id="printReportsBtn"><i data-lucide="printer"></i> Print</button>
+    </div>
+  </form>
+
+  <section class="dashboard-stats-grid" id="reportsStats" aria-label="Report summary">
+    <article class="stat-card">
+      <span class="stat-label">Paid revenue</span>
+      <strong class="stat-value" id="reportRevenue">PHP 0.00</strong>
+      <span class="stat-sub" id="reportAverage">Average paid booking PHP 0.00</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Total bookings</span>
+      <strong class="stat-value" id="reportBookings">0</strong>
+      <span class="stat-sub" id="reportBookingMix">0 approved, 0 pending</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Payment health</span>
+      <strong class="stat-value stat-value-accent" id="reportPaid">0</strong>
+      <span class="stat-sub" id="reportPaymentMix">0 pending, 0 failed</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Guests / Check-ins</span>
+      <strong class="stat-value" id="reportGuests">0</strong>
+      <span class="stat-sub" id="reportCheckins">0 checked in</span>
     </article>
   </section>
 
+  <section class="charts-grid cols-2-1" aria-label="Report charts">
+    <article class="chart-card">
+      <h3>Revenue by Date</h3>
+      <div class="chart-canvas-wrap">
+        <canvas id="reportRevenueChart" height="240"></canvas>
+      </div>
+    </article>
+    <article class="chart-card">
+      <h3>Payment Status</h3>
+      <div class="chart-canvas-wrap">
+        <canvas id="reportPaymentChart" height="240"></canvas>
+      </div>
+    </article>
+  </section>
+
+  <section class="charts-grid cols-2" aria-label="Category performance and report table">
+    <article class="chart-card">
+      <h3>Revenue by Category</h3>
+      <div class="chart-canvas-wrap">
+        <canvas id="reportCategoryChart" height="240"></canvas>
+      </div>
+    </article>
+    <article class="chart-card reports-note-card">
+      <h3>Report Scope</h3>
+      <div class="dashboard-focus-list">
+        <div>
+          <span>Date range</span>
+          <strong id="reportRangeLabel">-</strong>
+        </div>
+        <div>
+          <span>Rows included</span>
+          <strong id="reportRowsCount">0</strong>
+        </div>
+        <div>
+          <span>Cancelled bookings</span>
+          <strong id="reportCancelled">0</strong>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="table-card">
+    <div class="report-table-heading">
+      <div>
+        <h3>Booking Report Details</h3>
+        <p class="text-muted small-muted">The export uses the same filtered rows shown below.</p>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table" id="reportsTable">
+        <thead>
+          <tr>
+            <th>Booking</th>
+            <th>Date</th>
+            <th>Facility</th>
+            <th>Guest</th>
+            <th>Qty / Pax</th>
+            <th>Amount</th>
+            <th>Booking Status</th>
+            <th>Payment Status</th>
+            <th>Reference</th>
+          </tr>
+        </thead>
+        <tbody id="reportsTbody"></tbody>
+      </table>
+    </div>
+  </section>
+
   <script src="/assets/js/admin-layout.js"></script>
-  <script>lucide.createIcons();</script>
+  <script src="/admin/js/reports.js"></script>
 </body>
 </html>
