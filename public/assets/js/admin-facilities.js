@@ -1,6 +1,6 @@
 (function () {
   const API_BASE = '/api/admin/facilities';
-  const DEFAULT_IMAGE = '/mamagan-logo.svg';
+  const DEFAULT_IMAGE = '/assets/images/cottage.jpg';
 
   const state = {
     facilities: [],
@@ -169,7 +169,7 @@
     els.facilitiesTbody.innerHTML = state.facilities.map((facility) => `
       <tr>
         <td>
-          <img class="admin-facility-thumb" src="${escAttr(facility.image_url || DEFAULT_IMAGE)}" alt="${escAttr(facility.name)}">
+          <img class="admin-facility-thumb" src="${escAttr(facility.image_url || categoryImage(facility.category))}" alt="${escAttr(facility.name)}" onerror="this.onerror=null;this.src='${escAttr(categoryImage(facility.category))}';">
         </td>
         <td>
           <div class="text-strong">${escHtml(facility.name)}</div>
@@ -514,7 +514,11 @@
   }
 
   function setPreview(src) {
-    els.imagePreview.src = src || DEFAULT_IMAGE;
+    els.imagePreview.onerror = () => {
+      els.imagePreview.onerror = null;
+      els.imagePreview.src = categoryImage(els.category.value);
+    };
+    els.imagePreview.src = src || categoryImage(els.category.value);
     els.imagePreview.classList.add('is-visible');
   }
 
@@ -568,6 +572,12 @@
       CABANA: 'Rooms / Cabanas',
       BEACH_EQUIPMENT: 'Beach Equipment',
     }[category] || escHtml(category || '');
+  }
+
+  function categoryImage(category) {
+    if (category === 'CABANA') return '/assets/images/cabana.jpg';
+    if (category === 'BEACH_EQUIPMENT') return '/assets/images/beach_equipment.jpg';
+    return '/assets/images/cottage.jpg';
   }
 
   function sizeLabel(size) {

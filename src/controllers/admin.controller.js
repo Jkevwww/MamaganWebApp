@@ -23,6 +23,11 @@ async function logFacilityAction(req, action, targetId, details) {
   });
 }
 
+function uploadedImageDataUrl(file) {
+  if (!file?.buffer || !file?.mimetype) return null;
+  return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+}
+
 async function getDashboardSummary(req, res, next) {
   try {
     const summary = await adminService.getDashboardSummary();
@@ -221,7 +226,7 @@ async function createFacility(req, res, next) {
   try {
     const data = req.body;
     if (req.file) {
-      data.image_url = `/uploads/facilities/${req.file.filename}`;
+      data.image_url = uploadedImageDataUrl(req.file);
     }
     const id = await adminService.createFacility(data);
 
@@ -237,7 +242,7 @@ async function updateFacility(req, res, next) {
   try {
     const data = req.body;
     if (req.file) {
-      data.image_url = `/uploads/facilities/${req.file.filename}`;
+      data.image_url = uploadedImageDataUrl(req.file);
     }
     const success = await adminService.updateFacility(req.params.id, data);
     if (!success) return res.status(404).json({ message: 'Facility not found' });
@@ -268,7 +273,7 @@ async function updateFacilityStatus(req, res, next) {
 
 async function updateFacilityImage(req, res, next) {
   try {
-    const imageUrl = req.file ? `/uploads/facilities/${req.file.filename}` : req.body.image_url;
+    const imageUrl = req.file ? uploadedImageDataUrl(req.file) : req.body.image_url;
     const success = await adminService.updateFacilityImage(req.params.id, imageUrl || null);
     if (!success) return res.status(404).json({ message: 'Facility not found' });
 

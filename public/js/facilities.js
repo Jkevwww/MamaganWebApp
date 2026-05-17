@@ -79,9 +79,10 @@ function renderFacilityCard(f) {
   const priceMin = Number(f.price_min || 0);
   const priceMax = Number(f.price_max || priceMin);
   const priceText = `PHP ${priceMin.toLocaleString()}${priceMax > priceMin ? ` - PHP ${priceMax.toLocaleString()}` : ''}`;
+  const fallbackImage = categoryImage(f.category);
   return `
     <div class="facility-card ${!f.bookable ? 'is-loading' : ''}">
-      <img src="${escAttr(f.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80')}" alt="${escAttr(f.name)}" loading="lazy" />
+      <img src="${escAttr(f.image_url || fallbackImage)}" alt="${escAttr(f.name)}" loading="lazy" onerror="this.onerror=null;this.src='${escAttr(fallbackImage)}';" />
       <div class="card-body">
         <div class="facility-card-header-row">
           <h3 class="facility-card-heading">${escHtml(f.name)}</h3>
@@ -130,6 +131,12 @@ function prettyCategory(cat) {
     BEACH_EQUIPMENT: 'Equipment',
   };
   return map[cat] || cat;
+}
+
+function categoryImage(category) {
+  if (category === 'CABANA') return '/assets/images/cabana.jpg';
+  if (category === 'BEACH_EQUIPMENT') return '/assets/images/beach_equipment.jpg';
+  return '/assets/images/cottage.jpg';
 }
 
 function getSelectedPriceRange() {

@@ -5,30 +5,12 @@ const adminMiddleware = require('../middleware/admin');
 const authMiddleware = require('../middleware/auth');
 const { requirePermission } = require('../middleware/auth');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-const uploadDir = path.join(__dirname, '../../public/uploads/facilities');
-fs.mkdirSync(uploadDir, { recursive: true });
-
-// Configure Multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'facility-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) return cb(null, true);
+    if (mimetype) return cb(null, true);
     cb(new Error('Only images (jpg, png, webp) are allowed'));
   },
   limits: { fileSize: 5 * 1024 * 1024 }
