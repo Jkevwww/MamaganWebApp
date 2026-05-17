@@ -46,7 +46,7 @@ async function getAllFacilities(filters = {}) {
   query += ` ORDER BY FIELD(category, 'COTTAGE', 'CABANA', 'BEACH_EQUIPMENT'), FIELD(size, 'SMALL', 'MEDIUM', 'LARGE', 'EXTRA_LARGE'), name`;
 
   const [rows] = await pool.query(query, params);
-  return rows;
+  return attachReviewSummaries(rows);
 }
 
 async function getFacilityById(id) {
@@ -54,7 +54,73 @@ async function getFacilityById(id) {
   if (rows.length === 0) {
     throw new AppError('Facility not found', 404);
   }
-  return rows[0];
+  const [withReviews] = await attachReviewSummaries(rows);
+  return withReviews;
+}
+
+function normalizeReview(row, media = []) {
+  return {
+    id: row.id,
+    facility_id: row.facility_id,
+    user_id: row.user_id,
+    booking_id: row.booking_id,
+    rating: Number(row.rating || 0),
+    comment: row.comment || '',
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    user_name: row.user_name,
+    media,
+  };
+}
+
+async function attachReviewSummaries(facilities) {
+  if (!facilities.length) return facilities;
+  const ids = facilities.map((facility) => facility.id);
+  const placeholders = ids.map(() => '?').join(',');
+
+  const [summaryRows] = await pool.query(
+    `SELECT facility_id, COUNT(*) AS review_count, AVG(rating) AS average_rating
+     FROM facility_reviews
+     WHERE facility_id IN (${placeholders})
+     GROUP BY facility_id`,
+    ids
+  );
+  const summaryByFacility = new Map(summaryRows.map((row) => [Number(row.facility_id), row]));
+
+  const [latestRows] = await pool.query(
+    `SELECT fr.id, fr.facility_id, fr.rating, fr.comment, fr.created_at, u.name AS user_name
+     FROM facility_reviews fr
+     INNER JOIN users u ON u.id = fr.user_id
+     WHERE fr.facility_id IN (${placeholders})
+     ORDER BY fr.created_at DESC, fr.id DESC
+     LIMIT 80`,
+    ids
+  );
+  const latestByFacility = new Map();
+  latestRows.forEach((row) => {
+    const key = Number(row.facility_id);
+    const current = latestByFacility.get(key) || [];
+    if (current.length < 2) {
+      current.push({
+        id: row.id,
+        rating: Number(row.rating || 0),
+        comment: row.comment || '',
+        user_name: row.user_name,
+        created_at: row.created_at,
+      });
+      latestByFacility.set(key, current);
+    }
+  });
+
+  return facilities.map((facility) => {
+    const summary = summaryByFacility.get(Number(facility.id)) || {};
+    return {
+      ...facility,
+      review_count: Number(summary.review_count || 0),
+      average_rating: summary.average_rating ? Number(summary.average_rating) : null,
+      latest_reviews: latestByFacility.get(Number(facility.id)) || [],
+    };
+  });
 }
 
 /**
@@ -468,6 +534,145 @@ async function getTicketForBooking(bookingId, userId) {
   };
 }
 
+async function getFacilityReviews(facilityId) {
+  await getFacilityById(facilityId);
+
+  const [reviews] = await pool.query(
+    `SELECT fr.*, u.name AS user_name
+     FROM facility_reviews fr
+     INNER JOIN users u ON u.id = fr.user_id
+     WHERE fr.facility_id = ?
+     ORDER BY fr.created_at DESC, fr.id DESC
+     LIMIT 100`,
+    [facilityId]
+  );
+
+  if (!reviews.length) {
+    return { reviews: [], summary: { review_count: 0, average_rating: null } };
+  }
+
+  const reviewIds = reviews.map((review) => review.id);
+  const placeholders = reviewIds.map(() => '?').join(',');
+  const [mediaRows] = await pool.query(
+    `SELECT id, review_id, media_type, media_url, original_name, mime_type, file_size
+     FROM facility_review_media
+     WHERE review_id IN (${placeholders})
+     ORDER BY id ASC`,
+    reviewIds
+  );
+  const mediaByReview = new Map();
+  mediaRows.forEach((media) => {
+    const items = mediaByReview.get(media.review_id) || [];
+    items.push({
+      id: media.id,
+      type: media.media_type,
+      url: media.media_url,
+      original_name: media.original_name,
+      mime_type: media.mime_type,
+      file_size: media.file_size,
+    });
+    mediaByReview.set(media.review_id, items);
+  });
+
+  const [[summary]] = await pool.query(
+    'SELECT COUNT(*) AS review_count, AVG(rating) AS average_rating FROM facility_reviews WHERE facility_id = ?',
+    [facilityId]
+  );
+
+  return {
+    reviews: reviews.map((review) => normalizeReview(review, mediaByReview.get(review.id) || [])),
+    summary: {
+      review_count: Number(summary.review_count || 0),
+      average_rating: summary.average_rating ? Number(summary.average_rating) : null,
+    },
+  };
+}
+
+async function findEligibleReviewBooking(facilityId, userId) {
+  const [rows] = await pool.query(
+    `SELECT id
+     FROM bookings
+     WHERE facility_id = ?
+       AND user_id = ?
+       AND status != 'cancelled'
+       AND (payment_status = 'paid' OR status = 'approved')
+     ORDER BY date DESC, created_at DESC, id DESC
+     LIMIT 1`,
+    [facilityId, userId]
+  );
+  return rows[0] || null;
+}
+
+async function createFacilityReview({ facilityId, userId, rating, comment, mediaFiles = [] }) {
+  await getFacilityById(facilityId);
+  const parsedRating = Number.parseInt(rating, 10);
+  if (!Number.isInteger(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+    throw new AppError('Rating must be between 1 and 5', 400);
+  }
+
+  const text = String(comment || '').trim();
+  if (!text && mediaFiles.length === 0) {
+    throw new AppError('Add a comment or at least one photo/video', 400);
+  }
+  if (text.length > 1500) {
+    throw new AppError('Comment must be 1500 characters or fewer', 400);
+  }
+
+  const booking = await findEligibleReviewBooking(facilityId, userId);
+  if (!booking) {
+    throw new AppError('Only users with a paid or approved booking for this facility can leave a review', 403);
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [result] = await conn.query(
+      `INSERT INTO facility_reviews (facility_id, user_id, booking_id, rating, comment)
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         booking_id = VALUES(booking_id),
+         rating = VALUES(rating),
+         comment = VALUES(comment),
+         updated_at = CURRENT_TIMESTAMP`,
+      [facilityId, userId, booking.id, parsedRating, text || null]
+    );
+
+    let reviewId = result.insertId;
+    if (!reviewId) {
+      const [existing] = await conn.query(
+        'SELECT id FROM facility_reviews WHERE facility_id = ? AND user_id = ? LIMIT 1',
+        [facilityId, userId]
+      );
+      reviewId = existing[0].id;
+    }
+
+    if (mediaFiles.length) {
+      const values = mediaFiles.map((file) => [
+        reviewId,
+        file.mimetype.startsWith('video/') ? 'video' : 'image',
+        `/uploads/reviews/${file.filename}`,
+        file.originalname || null,
+        file.mimetype || null,
+        file.size || null,
+      ]);
+      await conn.query(
+        `INSERT INTO facility_review_media
+          (review_id, media_type, media_url, original_name, mime_type, file_size)
+         VALUES ?`,
+        [values]
+      );
+    }
+
+    await conn.commit();
+    return { id: reviewId, message: 'Review submitted' };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = { 
   getAllFacilities, 
   getFacilityById, 
@@ -478,5 +683,7 @@ module.exports = {
   getBookingById,
   cancelBooking,
   deleteBooking,
-  getTicketForBooking
+  getTicketForBooking,
+  getFacilityReviews,
+  createFacilityReview
 };

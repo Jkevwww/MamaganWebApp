@@ -134,6 +134,30 @@ async function getTicketForBooking(req, res, next) {
   }
 }
 
+async function getFacilityReviews(req, res, next) {
+  try {
+    const result = await facilityService.getFacilityReviews(req.params.id);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createFacilityReview(req, res, next) {
+  try {
+    const result = await facilityService.createFacilityReview({
+      facilityId: req.params.id,
+      userId: req.user.id,
+      rating: req.body.rating,
+      comment: req.body.comment,
+      mediaFiles: req.files || [],
+    });
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = { 
   getAllFacilities, 
   getFacilityById, 
@@ -144,5 +168,7 @@ module.exports = {
   getBookingById,
   cancelBooking,
   deleteBooking,
-  getTicketForBooking
+  getTicketForBooking,
+  getFacilityReviews,
+  createFacilityReview
 };
