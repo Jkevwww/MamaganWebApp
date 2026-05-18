@@ -296,8 +296,8 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
 .supported-by-set img {
   display: block;
   width: auto;
-  height: clamp(44px, 6vw, 68px);
-  max-width: 150px;
+  height: clamp(54px, 7vw, 84px);
+  max-width: 185px;
   object-fit: contain;
   flex: 0 0 auto;
 }
