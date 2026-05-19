@@ -32,6 +32,10 @@ function normalizeMessages(messages, fallbackMessage) {
     .filter((message) => message.content);
 }
 
+function getOpenAIErrorCode(err) {
+  return err.code || err.error?.code || err.response?.data?.error?.code || null;
+}
+
 router.post('/', async (req, res, next) => {
   try {
     const client = getClient();
@@ -65,8 +69,16 @@ router.post('/', async (req, res, next) => {
     }
 
     if (err.status === 429) {
+      const code = getOpenAIErrorCode(err);
+
+      if (code === 'insufficient_quota') {
+        return res.status(503).json({
+          message: 'AI assistant quota is exhausted. Check OpenAI billing, credits, or project limits.',
+        });
+      }
+
       return res.status(429).json({
-        message: 'AI assistant is receiving too many requests. Please try again later.',
+        message: 'AI assistant rate limit was reached. Please wait a moment and try again.',
       });
     }
 
