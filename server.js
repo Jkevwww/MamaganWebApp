@@ -19,6 +19,7 @@ const adminRoutes = require('./src/routes/admin.routes');
 const googleAuthRoutes = require('./src/routes/googleAuth.routes');
 const githubAuthRoutes = require('./src/routes/githubAuth.routes');
 const paymentRoutes = require('./src/routes/payment.routes');
+const chatRoutes = require('./src/routes/chat.routes');
 
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
@@ -119,6 +120,14 @@ const authApiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests. Please try again later.' },
+});
+
+const chatApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many chatbot messages. Please try again later.' },
 });
 
 function readAuthToken(req) {
@@ -226,6 +235,7 @@ app.use('/api/auth/github', authApiLimiter, githubAuthRoutes);
 app.use('/api/facilities', facilityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/chat', chatApiLimiter, chatRoutes);
 
 // ─── SPA-style routes for a few clean URLs ───────────────────────────────────
 const frontendRoutes = ['/login', '/register', '/facilities'];
