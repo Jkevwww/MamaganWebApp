@@ -1062,7 +1062,7 @@ img, video, canvas, svg { max-width: 100%; height: auto; }
   border: 1px solid var(--color-border);
 }
 
-/* AI chatbot */
+/* Client-admin chat widget */
 .chatbot-root {
   position: fixed;
   right: 1.25rem;

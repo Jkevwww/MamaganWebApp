@@ -124,10 +124,10 @@ const authApiLimiter = rateLimit({
 
 const chatApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 40,
+  limit: 120,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: 'Too many chatbot messages. Please try again later.' },
+  message: { message: 'Too many chat requests. Please try again later.' },
 });
 
 function readAuthToken(req) {

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.qodo
+.env
+.env.*
+!.env.example
+node_modules
+npm-debug.log*
+*.log
+.codex-*.log
+Dockerfile
+docker-compose.yml
+README.md
+TODO.md
+docs
+public/uploads/*
+!public/uploads/.gitkeep

@@ -75,6 +75,59 @@ npm start
 
 Default local URL when `PORT=10000`: `http://localhost:10000`
 
+### 5) Docker
+
+The repository includes a production Docker image and a Docker Compose setup with MySQL.
+
+Docker runtime values are loaded from `.env`. Keep that file private because it contains real credentials and is ignored by Git.
+
+If you want to create a fresh private env file later, copy the sanitized template and fill in values:
+
+```bash
+cp .env.example .env
+```
+
+For local Docker, these values are enough to use the bundled MySQL container:
+
+```env
+NODE_ENV=production
+PORT=10000
+SERVER_URL=http://localhost:10000
+CLIENT_URL=http://localhost:10000
+JWT_SECRET=replace-this-with-a-long-random-value
+SESSION_SECRET=replace-this-with-a-long-random-value
+MYSQL_HOST=db
+MYSQL_PORT=3306
+MYSQL_USER=mamagan
+MYSQL_PASSWORD=mamagan_password
+MYSQL_DATABASE=mamagan
+```
+
+Build and start the app plus MySQL:
+
+```bash
+docker compose --env-file .env up --build -d
+```
+
+Run database migrations and seed data:
+
+```bash
+docker compose --env-file .env --profile tools run --rm migrate
+docker compose --env-file .env --profile tools run --rm seed
+```
+
+Open `http://localhost:10000`.
+
+Useful Docker commands:
+
+```bash
+docker compose logs -f app
+docker compose down
+docker compose down -v
+```
+
+`docker compose down -v` removes the MySQL and upload volumes, so only use it when you intentionally want to delete local Docker data.
+
 ---
 
 ## Authentication

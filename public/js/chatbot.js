@@ -1,12 +1,5 @@
 (function () {
-  const STORAGE_KEY = 'mamagan_chat_history';
-  const MAX_HISTORY = 8;
-
-  const starterMessages = [
-    'How do I book a facility?',
-    'What payment options are available?',
-    'Where can I find my QR ticket?',
-  ];
+  const POLL_MS = 9000;
 
   function createIcon(name) {
     const icon = document.createElement('i');
@@ -15,25 +8,44 @@
     return icon;
   }
 
-  function loadHistory() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      return Array.isArray(parsed) ? parsed.slice(-MAX_HISTORY) : [];
-    } catch (_) {
-      return [];
-    }
-  }
-
-  function saveHistory(history) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-MAX_HISTORY)));
-  }
-
-  function appendMessage(list, role, content) {
+  function appendMessage(list, message) {
     const item = document.createElement('div');
-    item.className = `chatbot-message chatbot-message--${role}`;
-    item.textContent = content;
+    const roleClass = message.sender_type === 'USER' ? 'user' : 'assistant';
+    item.className = `chatbot-message chatbot-message--${roleClass}`;
+    item.textContent = message.message;
     list.appendChild(item);
+  }
+
+  function renderMessages(list, messages) {
+    list.innerHTML = '';
+    if (!messages.length) {
+      const empty = document.createElement('div');
+      empty.className = 'chatbot-message chatbot-message--assistant';
+      empty.textContent = 'Send your question and the admin team can reply here.';
+      list.appendChild(empty);
+      return;
+    }
+
+    messages.forEach((message) => appendMessage(list, message));
     list.scrollTop = list.scrollHeight;
+  }
+
+  async function api(path, options = {}) {
+    const response = await fetch(path, {
+      credentials: 'same-origin',
+      ...options,
+      headers: {
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.headers || {}),
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const err = new Error(data.message || 'Request failed.');
+      err.status = response.status;
+      throw err;
+    }
+    return data;
   }
 
   function setBusy(form, input, submitButton, busy) {
@@ -42,30 +54,11 @@
     form.classList.toggle('chatbot-form--busy', busy);
   }
 
-  async function sendMessage(history, message) {
-    const nextHistory = [...history, { role: 'user', content: message }].slice(-MAX_HISTORY);
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ messages: nextHistory }),
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.message || 'The assistant is unavailable right now.');
-    }
-
-    return {
-      reply: data.reply || 'I could not generate a response right now.',
-      history: [...nextHistory, { role: 'assistant', content: data.reply || '' }].slice(-MAX_HISTORY),
-    };
-  }
-
   function initChatbot() {
     if (document.querySelector('[data-chatbot-root]')) return;
 
-    let history = loadHistory();
+    let isAuthenticated = false;
+    let pollTimer = null;
 
     const root = document.createElement('div');
     root.className = 'chatbot-root';
@@ -74,13 +67,13 @@
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'chatbot-toggle';
-    toggle.setAttribute('aria-label', 'Open Mamagan assistant');
+    toggle.setAttribute('aria-label', 'Open admin chat');
     toggle.setAttribute('aria-expanded', 'false');
     toggle.append(createIcon('message-circle'));
 
     const panel = document.createElement('section');
     panel.className = 'chatbot-panel';
-    panel.setAttribute('aria-label', 'Mamagan AI assistant');
+    panel.setAttribute('aria-label', 'Message Mamagan admin');
     panel.setAttribute('aria-hidden', 'true');
 
     const header = document.createElement('div');
@@ -89,30 +82,21 @@
     const titleWrap = document.createElement('div');
     const kicker = document.createElement('span');
     kicker.className = 'chatbot-kicker';
-    kicker.textContent = 'AI Assistant';
+    kicker.textContent = 'Admin Chat';
     const title = document.createElement('h2');
-    title.textContent = 'Mamagan Help';
+    title.textContent = 'Message Mamagan';
     titleWrap.append(kicker, title);
 
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
     closeButton.className = 'chatbot-close';
-    closeButton.setAttribute('aria-label', 'Close Mamagan assistant');
+    closeButton.setAttribute('aria-label', 'Close admin chat');
     closeButton.append(createIcon('x'));
     header.append(titleWrap, closeButton);
 
     const messages = document.createElement('div');
     messages.className = 'chatbot-messages';
     messages.setAttribute('aria-live', 'polite');
-
-    const intro = document.createElement('div');
-    intro.className = 'chatbot-message chatbot-message--assistant';
-    intro.textContent = 'Hi. Ask me about bookings, facilities, payments, or QR tickets.';
-    messages.appendChild(intro);
-    history.forEach((message) => appendMessage(messages, message.role, message.content));
-
-    const starters = document.createElement('div');
-    starters.className = 'chatbot-starters';
 
     const status = document.createElement('p');
     status.className = 'chatbot-status';
@@ -125,38 +109,51 @@
     const input = document.createElement('input');
     input.type = 'text';
     input.name = 'message';
-    input.placeholder = 'Ask a question...';
+    input.placeholder = 'Type your question...';
     input.autocomplete = 'off';
-    input.maxLength = 600;
-    input.setAttribute('aria-label', 'Message for Mamagan assistant');
+    input.maxLength = 1000;
+    input.setAttribute('aria-label', 'Message for Mamagan admin');
 
     const submitButton = document.createElement('button');
     submitButton.type = 'submit';
     submitButton.setAttribute('aria-label', 'Send message');
     submitButton.append(createIcon('send'));
 
-    starterMessages.forEach((starter) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = starter;
-      button.addEventListener('click', () => {
-        input.value = starter;
-        form.requestSubmit();
-      });
-      starters.appendChild(button);
-    });
-
     form.append(input, submitButton);
-    panel.append(header, messages, starters, status, form);
+    panel.append(header, messages, status, form);
     root.append(panel, toggle);
     document.body.appendChild(root);
 
     function setOpen(open) {
       root.classList.toggle('chatbot-root--open', open);
       toggle.setAttribute('aria-expanded', String(open));
-      toggle.setAttribute('aria-label', open ? 'Close Mamagan assistant' : 'Open Mamagan assistant');
+      toggle.setAttribute('aria-label', open ? 'Close admin chat' : 'Open admin chat');
       panel.setAttribute('aria-hidden', String(!open));
-      if (open) input.focus();
+      if (open) {
+        input.focus();
+        void loadThread();
+      }
+    }
+
+    async function loadThread() {
+      try {
+        const data = await api('/api/chat/thread');
+        isAuthenticated = true;
+        renderMessages(messages, data.messages || []);
+        status.textContent = data.thread?.status === 'CLOSED'
+          ? 'This conversation was closed. Sending a new message will reopen it.'
+          : '';
+        input.disabled = false;
+        submitButton.disabled = false;
+      } catch (err) {
+        isAuthenticated = false;
+        renderMessages(messages, []);
+        input.disabled = true;
+        submitButton.disabled = true;
+        status.textContent = err.status === 401
+          ? 'Sign in or create an account to message the admin team.'
+          : err.message;
+      }
     }
 
     toggle.addEventListener('click', () => setOpen(!root.classList.contains('chatbot-root--open')));
@@ -165,27 +162,38 @@
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const message = input.value.trim();
-      if (!message) return;
+      if (!message || !isAuthenticated) return;
 
       input.value = '';
-      status.textContent = 'Thinking...';
-      appendMessage(messages, 'user', message);
+      status.textContent = 'Sending...';
       setBusy(form, input, submitButton, true);
 
       try {
-        const result = await sendMessage(history, message);
-        history = result.history;
-        saveHistory(history);
-        appendMessage(messages, 'assistant', result.reply);
-        status.textContent = '';
+        await api('/api/chat/messages', {
+          method: 'POST',
+          body: JSON.stringify({ message }),
+        });
+        await loadThread();
+        status.textContent = 'Sent to admin.';
       } catch (err) {
-        appendMessage(messages, 'assistant', err.message);
-        status.textContent = '';
+        status.textContent = err.message;
       } finally {
         setBusy(form, input, submitButton, false);
         input.focus();
       }
     });
+
+    pollTimer = window.setInterval(() => {
+      if (root.classList.contains('chatbot-root--open')) {
+        void loadThread();
+      }
+    }, POLL_MS);
+
+    window.addEventListener('beforeunload', () => {
+      if (pollTimer) window.clearInterval(pollTimer);
+    });
+
+    void loadThread();
 
     if (window.lucide) {
       window.lucide.createIcons();

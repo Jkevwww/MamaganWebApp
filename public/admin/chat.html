@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Chat - Mamagan Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="admin-body">
+
+  <header class="page-header">
+    <h1 class="page-title">Client Chat</h1>
+    <p class="page-subtitle">Answer client questions from the website chat widget.</p>
+  </header>
+
+  <div id="chatAlert" class="dashboard-alert is-hidden" role="status" aria-live="polite"></div>
+
+  <section class="admin-chat-shell" aria-label="Client conversations">
+    <aside class="admin-chat-threads" aria-label="Conversation list">
+      <div class="admin-chat-toolbar">
+        <div class="admin-chat-search">
+          <i data-lucide="search" aria-hidden="true"></i>
+          <input type="search" id="chatSearch" placeholder="Search clients" aria-label="Search clients">
+        </div>
+        <select id="chatStatusFilter" class="form-select" aria-label="Filter conversations">
+          <option value="">All</option>
+          <option value="OPEN">Open</option>
+          <option value="CLOSED">Closed</option>
+        </select>
+      </div>
+      <div id="chatThreadList" class="admin-chat-thread-list"></div>
+    </aside>
+
+    <section class="admin-chat-conversation" aria-label="Selected conversation">
+      <div class="admin-chat-conversation-header">
+        <div>
+          <h2 id="chatClientName">Select a conversation</h2>
+          <p id="chatClientMeta">Client details will appear here.</p>
+        </div>
+        <button type="button" id="chatStatusToggle" class="btn btn-secondary" disabled>
+          <i data-lucide="check-circle"></i>
+          <span>Close</span>
+        </button>
+      </div>
+
+      <div id="chatMessageList" class="admin-chat-message-list">
+        <div class="admin-chat-empty">Choose a client thread to view messages.</div>
+      </div>
+
+      <form id="adminChatForm" class="admin-chat-form">
+        <input type="text" id="adminChatInput" maxlength="1000" placeholder="Reply to client..." disabled>
+        <button type="submit" class="btn btn-primary" id="adminChatSend" disabled>
+          <i data-lucide="send"></i>
+          <span>Send</span>
+        </button>
+      </form>
+    </section>
+  </section>
+
+  <script src="/assets/js/admin-layout.js"></script>
+  <script src="/admin/js/chat.js"></script>
+</body>
+</html>

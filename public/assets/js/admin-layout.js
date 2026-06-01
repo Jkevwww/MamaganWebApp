@@ -9,6 +9,7 @@
     { name: 'Rates & Promos', path: '/admin/rates.html', icon: 'tags.svg' },
     { name: 'Calendar', path: '/admin/calendar.html', icon: 'calendar.svg' },
     { name: 'Bookings', path: '/admin/bookings.html', icon: 'book-alt.svg' },
+    { name: 'Client Chat', path: '/admin/chat.html', icon: 'message-circle.svg' },
     { name: 'Check-In/QR', path: '/admin/check-in.html', icon: 'qr.svg' },
     { name: 'Reports', path: '/admin/reports.html', icon: 'data-report.svg' },
     { name: 'Clients/Users', path: '/admin/users.html', icon: 'target-audience.svg' },
